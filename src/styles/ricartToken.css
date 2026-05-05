@@ -353,13 +353,11 @@
   text-anchor: middle;
 }
 
-/* valeur normale */
 .req-value-normal {
   fill: #64748b;
   font-weight: 400;
 }
 
-/* valeur changée → reste rouge */
 .req-value-changed {
   fill: #dc2626;
   font-weight: 700;
