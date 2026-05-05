@@ -1,0 +1,67 @@
+.sidebar {
+  width: 220px;
+  background: #ffffff;
+  border-right: 1px solid rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
+}
+
+/* GROUP */
+.sidebar-group {
+  padding: 16px 12px 8px;
+}
+
+/* TITLE */
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+/* BUTTON */
+.algo-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+  color: #475569;
+  transition: 0.12s;
+}
+
+/* ICON */
+.algo-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #f6f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* HOVER */
+.algo-btn:hover {
+  background: #f6f7fb;
+  color: #0f172a;
+}
+
+/* ACTIVE */
+.algo-btn.active {
+  background: rgba(37, 99, 235, 0.1);
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.algo-btn.active .algo-icon {
+  background: rgba(37, 99, 235, 0.2);
+  color: #2563eb;
+}

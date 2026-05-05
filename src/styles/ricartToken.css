@@ -1,0 +1,381 @@
+.ricart-token-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f7;
+  overflow: hidden;
+}
+
+.ricart-token-svg {
+  width: 100%;
+  height: 100%;
+  background: #f8faff;
+  border-radius: 14px;
+}
+
+.ricart-mesh-edge {
+  stroke: rgba(15, 23, 42, 0.1);
+  stroke-width: 1;
+}
+
+.ricart-active-req-edge {
+  stroke: #2563eb;
+  stroke-width: 2;
+  opacity: 0.85;
+}
+
+.ricart-active-token-edge {
+  stroke: #f97316;
+  stroke-width: 2.5;
+  opacity: 0.9;
+}
+
+.ricart-msg-req-badge {
+  fill: #dbeafe;
+  stroke: #2563eb;
+}
+
+.ricart-msg-token-badge {
+  fill: #ffedd5;
+  stroke: #f97316;
+}
+
+.ricart-msg-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #0f172a;
+}
+
+.ricart-node-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.ricart-node-state {
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.ricart-req-values {
+  font-size: 9px;
+  font-family: monospace;
+  fill: #64748b;
+  text-anchor: middle;
+}
+
+.ricart-token-box {
+  fill: #fff7ed;
+  stroke: #f97316;
+}
+
+.ricart-token-dot {
+  fill: #f97316;
+}
+
+.ricart-token-label {
+  font-size: 8px;
+  font-weight: 700;
+  fill: #ea580c;
+  dominant-baseline: middle;
+}
+
+.ricart-req-ring {
+  fill: none;
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.ricart-req-badge {
+  fill: #fffbeb;
+  stroke: #f59e0b;
+}
+
+.ricart-req-text {
+  font-size: 8px;
+  font-weight: 700;
+  fill: #d97706;
+  text-anchor: middle;
+}
+
+.ricart-sc-light {
+  fill: #f97316;
+  opacity: 0.08;
+}
+
+.ricart-sc-ring {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.ricart-sc-badge {
+  fill: #fff7ed;
+  stroke: #f97316;
+}
+
+.ricart-sc-text {
+  font-size: 8px;
+  font-weight: 700;
+  fill: #ea580c;
+  text-anchor: middle;
+}
+
+
+
+.ricart-token-box {
+  fill: #fff7ed;
+  stroke: #f97316;
+  stroke-width: 1.2;
+}
+
+.ricart-token-label {
+  font-size: 8px;
+  font-weight: 700;
+  fill: #ea580c;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* ===== TOKEN AU-DESSUS ===== */
+
+.ricart-token-floating {
+  animation: tokenFloat 1.6s ease-in-out infinite;
+}
+
+.ricart-token-box {
+  fill: #fff7ed;
+  stroke: #f97316;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 8px 14px rgba(249, 115, 22, 0.25));
+}
+
+.ricart-token-label {
+  font-size: 9px;
+  font-weight: 800;
+  fill: #ea580c;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: "DM Mono", monospace;
+}
+
+@keyframes tokenFloat {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* ===== REQ[] PLUS VISIBLE ===== */
+
+.ricart-req-card-bg {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: #cbd5e1;
+  stroke-width: 1.1;
+  filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.08));
+}
+
+.ricart-req-values {
+  font-size: 9px;
+  font-family: "DM Mono", monospace;
+  font-weight: 700;
+  fill: #334155;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* ===== ANIMATION SITE DEMANDEUR ===== */
+
+.ricart-req-ring {
+  fill: none;
+  stroke: #f59e0b;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  animation: reqRotate 1.4s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes reqRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== ANIMATION SECTION CRITIQUE ===== */
+
+.ricart-sc-light {
+  fill: #f97316;
+  opacity: 0.1;
+  animation: scPulse 4s ease-in-out infinite;
+}
+
+.ricart-sc-ring {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 2.5;
+  stroke-dasharray: 7 4;
+  animation: reqRotate 4s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes scPulse {
+  0% {
+    opacity: 0.06;
+    r: 44;
+  }
+  50% {
+    opacity: 0.18;
+    r: 54;
+  }
+  100% {
+    opacity: 0.06;
+    r: 44;
+  }
+}
+
+/* ===== MESSAGES PLUS VISIBLES ===== */
+
+.ricart-active-req-edge {
+  stroke: #2563eb;
+  stroke-width: 3;
+  opacity: 0.9;
+  stroke-dasharray: 8 5;
+  animation: dashMove 0.8s linear infinite;
+}
+
+.ricart-active-token-edge {
+  stroke: #f97316;
+  stroke-width: 3.5;
+  opacity: 0.95;
+  stroke-dasharray: 10 5;
+  animation: dashMove 0.75s linear infinite;
+}
+
+@keyframes dashMove {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+
+.ricart-msg-req-badge {
+  fill: #dbeafe;
+  stroke: #2563eb;
+  stroke-width: 1.4;
+  filter: drop-shadow(0 5px 10px rgba(37, 99, 235, 0.18));
+}
+
+.ricart-msg-token-badge {
+  fill: #fff7ed;
+  stroke: #f97316;
+  stroke-width: 1.4;
+  filter: drop-shadow(0 5px 10px rgba(249, 115, 22, 0.22));
+}
+
+.ricart-msg-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #0f172a;
+  font-family: "DM Mono", monospace;
+}/* ===== GLOW DEMANDEUR (EFFET LAMPE) ===== */
+
+.ricart-req-glow {
+  fill: #f59e0b;
+  opacity: 0.12;
+  filter: blur(12px);
+
+  transform-origin: center;
+  transform-box: fill-box;
+
+  animation: reqPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes reqPulse {
+  0% {
+    opacity: 0.06;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 0.25;
+    transform: scale(1.3);
+  }
+
+  100% {
+    opacity: 0.06;
+    transform: scale(0.9);
+  }
+}
+
+.ricart-req-values {
+  font-size: 10px;
+  font-family: "DM Mono", monospace;
+  fill: #64748b;
+  text-anchor: middle;
+  transition: fill 0.4s ease;
+}
+
+/* effet highlight */
+.req-highlight {
+  fill: red;
+  font-weight: 700;
+  animation: reqFlash 1s ease;
+}
+
+
+.ricart-req-values {
+  font-size: 10px;
+  font-family: "DM Mono", monospace;
+  fill: #64748b;
+  text-anchor: middle;
+}
+
+.ricart-req-values {
+  font-size: 10px;
+  font-family: "DM Mono", monospace;
+  fill: #64748b;
+  text-anchor: middle;
+}
+
+/* valeur normale */
+.req-value-normal {
+  fill: #64748b;
+  font-weight: 400;
+}
+
+/* valeur changée → reste rouge */
+.req-value-changed {
+  fill: #dc2626;
+  font-weight: 700;
+}
+
+.req-value-changed {
+  fill: #dc2626;
+  font-weight: 700;
+  animation: valueFlash 0.6s ease;
+}
+
+@keyframes valueFlash {
+  0% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+} 
