@@ -8,6 +8,38 @@ import type {
 
 type SiteId = 1 | 2 | 3;
 
+type Action =
+  | { kind: "REQUEST_CS"; site: SiteId; clock: number }
+  | {
+      kind: "DELIVER_REQ";
+      from: SiteId;
+      to: SiteId;
+      sendClock: number;
+      receiveClock: number;
+      x: number;
+      dx: number;
+    }
+  | {
+      kind: "DELIVER_ACK";
+      from: SiteId;
+      to: SiteId;
+      sendClock: number;
+      receiveClock: number;
+      x: number;
+      dx: number;
+    }
+  | { kind: "TRY_ENTER"; site: SiteId }
+  | { kind: "EXIT_CS"; site: SiteId }
+  | {
+      kind: "DELIVER_REL";
+      from: SiteId;
+      to: SiteId;
+      sendClock: number;
+      receiveClock: number;
+      x: number;
+      dx: number;
+    };
+
 const sites: SiteId[] = [1, 2, 3];
 
 let eventId = 1;
@@ -39,7 +71,6 @@ function getProcess(processes: ProcessNode[], id: SiteId): ProcessNode {
   return processes.find((p) => p.id === id)!;
 }
 
-
 function setQueueEntry(
   queues: Record<number, QueueEntry[]>,
   owner: SiteId,
@@ -50,13 +81,40 @@ function setQueueEntry(
   );
 
   if (index !== -1) {
-    queues[owner][index] = entry; // remplace uniquement la case concernée
+    queues[owner][index] = entry;
   } else {
-    queues[owner].push(entry); // ajoute si la case n’existe pas
+    queues[owner].push(entry);
   }
 
+  queues[owner].sort((a, b) => {
+    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    return a.processId - b.processId;
+  });
 }
 
+function hasAllAck(site: SiteId, queues: Record<number, QueueEntry[]>): boolean {
+  return sites
+    .filter((s) => s !== site)
+    .every((other) =>
+      queues[site].some(
+        (e) => e.processId === other && (e.type === "ACQ" || e.type === "REL")
+      )
+    );
+}
+
+function hasPriority(
+  site: SiteId,
+  queues: Record<number, QueueEntry[]>
+): boolean {
+  const activeRequests = queues[site]
+    .filter((e) => e.type === "REQ")
+    .sort((a, b) => {
+      if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+      return a.processId - b.processId;
+    });
+
+  return activeRequests[0]?.processId === site;
+}
 
 function addStep(
   steps: LamportStep[],
@@ -81,147 +139,365 @@ function addStep(
   });
 }
 
-function sendMessage(
-  type: MessageType,
-  from: SiteId,
-  to: SiteId,
-  label: string,
-  sendClock: number,
-  receiveClock: number,
-  x: number,
-  dx: number,
-  processes: ProcessNode[],
-  queues: Record<number, QueueEntry[]>,
+function pushEvent(
   events: LamportEvent[],
-  logs: string[],
-  labelDy = -70,
-  clockDy = -16
+  type: MessageType | "ENTER_CS" | "EXIT_CS",
+  from: SiteId,
+  timestamp: number,
+  label: string,
+  x?: number,
+  dx?: number,
+  to?: SiteId,
+  receiveTimestamp?: number
 ) {
-  const sender = getProcess(processes, from);
-  const receiver = getProcess(processes, to);
-
-  sender.clock = sendClock;
-  receiver.clock = receiveClock;
-
-  if (type === "REQ") {
-    setQueueEntry(queues, to, {
-      type: "REQ",
-      processId: from,
-      timestamp: sendClock,
-    });
-  }
-
-  if (type === "ACQ") {
-    const existing = queues[to].find((e) => e.processId === from);
-
-    if (!existing || existing.type !== "REQ") {
-      setQueueEntry(queues, to, {
-        type: "ACQ",
-        processId: from,
-        timestamp: sendClock,
-      });
-    }
-  }
-
-  if (type === "REL") {
-    setQueueEntry(queues, to, {
-      type: "REL",
-      processId: from,
-      timestamp: sendClock,
-    });
-  }
-
   events.push({
     id: eventId++,
     type,
     from,
     to,
-    timestamp: sendClock,
-    receiveTimestamp: receiveClock,
+    timestamp,
+    receiveTimestamp,
     label,
     step: events.length + 1,
     x,
     dx,
-    labelDy,
-    clockDy,
-  });
-
-  logs.push(`P${from} → P${to} : ${label}`);
+    labelDy: -70,
+    clockDy: -16,
+  } as LamportEvent);
 }
 
-function localRequest(
-  site: SiteId,
-  requestClock: number,
-  processes: ProcessNode[],
-  queues: Record<number, QueueEntry[]>,
-  logs: string[]
-) {
-  const process = getProcess(processes, site);
-
-  process.clock = requestClock;
-  process.status = "requesting";
-
-  setQueueEntry(queues, site, {
-    type: "REQ",
-    processId: site,
-    timestamp: requestClock,
-  });
-
-  logs.push(`P${site} demande la SC : REQ(${site},${requestClock})`);
-}
-
-function enterCS(
-  site: SiteId,
-  processes: ProcessNode[],
-  events: LamportEvent[],
-  logs: string[]
-) {
-  const process = getProcess(processes, site);
-
-  process.clock += 1;
-  process.status = "in_cs";
-
-  events.push({
-    id: eventId++,
-    type: "ENTER_CS",
-    from: site,
-    timestamp: process.clock,
-    label: `P${site} entre SC`,
-    step: events.length + 1,
-  });
-
-  logs.push(`P${site} entre en section critique.`);
-}
-
-function exitCS(
-  site: SiteId,
+function executeAction(
+  action: Action,
   processes: ProcessNode[],
   queues: Record<number, QueueEntry[]>,
   events: LamportEvent[],
   logs: string[]
-) {
-  const process = getProcess(processes, site);
+): { title: string; description: string } {
+  switch (action.kind) {
+    case "REQUEST_CS": {
+      const p = getProcess(processes, action.site);
 
-  process.clock += 1;
-  process.status = "released";
+      p.clock = action.clock;
+      p.status = "requesting";
 
-  setQueueEntry(queues, site, {
-    type: "REL",
-    processId: site,
-    timestamp: process.clock,
-  });
+      setQueueEntry(queues, action.site, {
+        type: "REQ",
+        processId: action.site,
+        timestamp: action.clock,
+      });
 
-  events.push({
-    id: eventId++,
-    type: "EXIT_CS",
-    from: site,
-    timestamp: process.clock,
-    label: `P${site} sort SC`,
-    step: events.length + 1,
-  });
+      logs.push(
+        `P${action.site} demande la SC : REQ(${action.site},${action.clock})`
+      );
 
-  logs.push(`P${site} sort de la section critique.`);
+      return {
+        title: `P${action.site} demande la section critique`,
+        description: `P${action.site} incrémente son horloge et place REQ(${action.site},${action.clock}) dans sa file locale.`,
+      };
+    }
+
+    case "DELIVER_REQ": {
+      const sender = getProcess(processes, action.from);
+      const receiver = getProcess(processes, action.to);
+
+      sender.clock = action.sendClock;
+      receiver.clock = action.receiveClock;
+
+      setQueueEntry(queues, action.to, {
+        type: "REQ",
+        processId: action.from,
+        timestamp: action.sendClock,
+      });
+
+      pushEvent(
+        events,
+        "REQ",
+        action.from,
+        action.sendClock,
+        `R(${action.from},${action.sendClock})`,
+        action.x,
+        action.dx,
+        action.to,
+        action.receiveClock
+      );
+
+      logs.push(
+        `P${action.from} → P${action.to} : REQUEST(${action.from},${action.sendClock})`
+      );
+
+      return {
+        title: `P${action.from} envoie REQ à P${action.to}`,
+        description: `P${action.to} reçoit la requête de P${action.from} et met à jour son horloge logique.`,
+      };
+    }
+
+    case "DELIVER_ACK": {
+      const sender = getProcess(processes, action.from);
+      const receiver = getProcess(processes, action.to);
+
+      sender.clock = action.sendClock;
+      receiver.clock = action.receiveClock;
+
+      const existingReq = queues[action.to].find(
+        (e) => e.processId === action.from && e.type === "REQ"
+      );
+
+      if (!existingReq) {
+        setQueueEntry(queues, action.to, {
+          type: "ACQ",
+          processId: action.from,
+          timestamp: action.sendClock,
+        });
+      } else {
+        setQueueEntry(queues, action.to, {
+          type: "ACQ",
+          processId: action.from,
+          timestamp: action.sendClock,
+        });
+      }
+
+      pushEvent(
+        events,
+        "ACQ",
+        action.from,
+        action.sendClock,
+        `A(${action.from},${action.sendClock})`,
+        action.x,
+        action.dx,
+        action.to,
+        action.receiveClock
+      );
+
+      logs.push(
+        `P${action.from} → P${action.to} : ACK(${action.from},${action.sendClock})`
+      );
+
+      return {
+        title: `P${action.from} acquitte P${action.to}`,
+        description: `P${action.from} envoie ACK à P${action.to}.`,
+      };
+    }
+
+    case "TRY_ENTER": {
+      const p = getProcess(processes, action.site);
+
+      if (hasAllAck(action.site, queues) && hasPriority(action.site, queues)) {
+        p.clock += 1;
+        p.status = "in_cs";
+
+        pushEvent(
+          events,
+          "ENTER_CS",
+          action.site,
+          p.clock,
+          `P${action.site} entre SC`
+        );
+
+        logs.push(`P${action.site} entre en section critique.`);
+
+        return {
+          title: `P${action.site} entre en section critique`,
+          description: `P${action.site} a reçu tous les ACK et sa requête est la plus prioritaire.`,
+        };
+      }
+
+      logs.push(`P${action.site} ne peut pas encore entrer en section critique.`);
+
+      return {
+        title: `P${action.site} tente d’entrer en section critique`,
+        description: `P${action.site} ne peut pas encore entrer car toutes les conditions ne sont pas satisfaites.`,
+      };
+    }
+
+    case "EXIT_CS": {
+      const p = getProcess(processes, action.site);
+
+      p.clock += 1;
+      p.status = "released";
+
+      setQueueEntry(queues, action.site, {
+        type: "REL",
+        processId: action.site,
+        timestamp: p.clock,
+      });
+
+      pushEvent(
+        events,
+        "EXIT_CS",
+        action.site,
+        p.clock,
+        `P${action.site} sort SC`
+      );
+
+      logs.push(`P${action.site} sort de la section critique.`);
+
+      return {
+        title: `P${action.site} sort de la section critique`,
+        description: `P${action.site} libère la ressource critique.`,
+      };
+    }
+
+    case "DELIVER_REL": {
+      const sender = getProcess(processes, action.from);
+      const receiver = getProcess(processes, action.to);
+
+      sender.clock = action.sendClock;
+      receiver.clock = action.receiveClock;
+
+      setQueueEntry(queues, action.to, {
+        type: "REL",
+        processId: action.from,
+        timestamp: action.sendClock,
+      });
+
+      pushEvent(
+        events,
+        "REL",
+        action.from,
+        action.sendClock,
+        `L(${action.from},${action.sendClock})`,
+        action.x,
+        action.dx,
+        action.to,
+        action.receiveClock
+      );
+
+      logs.push(
+        `P${action.from} → P${action.to} : LIB(${action.from},${action.sendClock})`
+      );
+
+      return {
+        title: `P${action.from} envoie LIB à P${action.to}`,
+        description: `P${action.to} apprend que P${action.from} a libéré la section critique.`,
+      };
+    }
+  }
 }
+
+const scenario: Action[] = [
+  { kind: "REQUEST_CS", site: 1, clock: 1 },
+
+  {
+    kind: "DELIVER_REQ",
+    from: 1,
+    to: 2,
+    sendClock: 1,
+    receiveClock: 2,
+    x: 120,
+    dx: 195,
+  },
+  {
+    kind: "DELIVER_REQ",
+    from: 1,
+    to: 3,
+    sendClock: 1,
+    receiveClock: 2,
+    x: 120,
+    dx: 125,
+  },
+
+  { kind: "REQUEST_CS", site: 2, clock: 1 },
+
+  {
+    kind: "DELIVER_REQ",
+    from: 2,
+    to: 1,
+    sendClock: 1,
+    receiveClock: 2,
+    x: 120,
+    dx: 95,
+  },
+  {
+    kind: "DELIVER_REQ",
+    from: 2,
+    to: 3,
+    sendClock: 1,
+    receiveClock: 3,
+    x: 120,
+    dx: 250,
+  },
+
+  {
+    kind: "DELIVER_ACK",
+    from: 1,
+    to: 2,
+    sendClock: 3,
+    receiveClock: 4,
+    x: 300,
+    dx: 85,
+  },
+  {
+    kind: "DELIVER_ACK",
+    from: 2,
+    to: 1,
+    sendClock: 5,
+    receiveClock: 6,
+    x: 400,
+    dx: 90,
+  },
+  {
+    kind: "DELIVER_ACK",
+    from: 3,
+    to: 1,
+    sendClock: 4,
+    receiveClock: 7,
+    x: 450,
+    dx: 105,
+  },
+  {
+    kind: "DELIVER_ACK",
+    from: 3,
+    to: 2,
+    sendClock: 5,
+    receiveClock: 6,
+    x: 500,
+    dx: 90,
+  },
+
+  { kind: "TRY_ENTER", site: 1 },
+  { kind: "EXIT_CS", site: 1 },
+
+  {
+    kind: "DELIVER_REL",
+    from: 1,
+    to: 2,
+    sendClock: 8,
+    receiveClock: 9,
+    x: 700,
+    dx: 75,
+  },
+  {
+    kind: "DELIVER_REL",
+    from: 1,
+    to: 3,
+    sendClock: 8,
+    receiveClock: 9,
+    x: 700,
+    dx: 90,
+  },
+
+  { kind: "TRY_ENTER", site: 2 },
+  { kind: "EXIT_CS", site: 2 },
+
+  {
+    kind: "DELIVER_REL",
+    from: 2,
+    to: 1,
+    sendClock: 10,
+    receiveClock: 11,
+    x: 900,
+    dx: 80,
+  },
+  {
+    kind: "DELIVER_REL",
+    from: 2,
+    to: 3,
+    sendClock: 10,
+    receiveClock: 11,
+    x: 900,
+    dx: 80,
+  },
+];
 
 export function generateLamportScenario(): LamportStep[] {
   eventId = 1;
@@ -238,256 +514,31 @@ export function generateLamportScenario(): LamportStep[] {
   const events: LamportEvent[] = [];
   const logs: string[] = [];
 
-addStep(
-  steps,
-  "État initial",
-  "Tous les sites sont au repos. Les horloges commencent à 0.",
-  processes,
-  queues,
-  events,
-  logs
-);
+  addStep(
+    steps,
+    "État initial",
+    "Tous les sites sont au repos. Les horloges commencent à 0.",
+    processes,
+    queues,
+    events,
+    logs
+  );
 
-localRequest(1,1, processes, queues, logs);
+  for (const action of scenario) {
+    const result = executeAction(action, processes, queues, events, logs);
 
-addStep(
-  steps,
-  "P1 demande la section critique",
-  "P1 incrémente son horloge et place REQ(1,1) dans sa file locale.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REQ", 1, 2, "R(1,1)", 1, 2, 120, 195, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 envoie REQ à P2",
-  "P2 reçoit la requête de P1 et met à jour son horloge logique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REQ", 1, 3, "R(1,1)", 1, 2, 120, 125, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 envoie REQ à P3",
-  "P3 reçoit la requête de P1.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-localRequest(2,1, processes, queues, logs);
-
-addStep(
-  steps,
-  "P2 demande aussi la section critique",
-  "P2 crée sa propre requête REQ(2,1). En cas d'égalité, P1 reste prioritaire car son identifiant est plus petit.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REQ", 2, 1, "R(2,1)", 1, 2, 120, 95, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 envoie REQ à P1",
-  "P1 reçoit la requête de P2.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REQ", 2, 3, "R(2,1)", 1, 3, 120, 250, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 envoie REQ à P3",
-  "P3 connaît maintenant les deux demandes : celle de P1 et celle de P2.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("ACQ", 1, 2, "A(1,3)", 3, 4, 300, 85, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 acquitte la requête de P2",
-  "Après réception de REQ(2,1), P1 envoie ACK à P2.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("ACQ", 2, 1, "A(2,5)", 5, 6, 400, 90, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 acquitte la requête de P1",
-  "Après réception de REQ(1,1), P2 envoie ACK à P1.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("ACQ", 3, 1, "A(3,4)", 4, 7, 450, 105, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P3 acquitte P1",
-  "P3 envoie ACK à P1 après avoir reçu sa requête.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("ACQ", 3, 2, "A(3,5)", 5, 6, 500, 90, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P3 acquitte P2",
-  "P3 envoie aussi ACK à P2.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-enterCS(1, processes, events, logs);
-
-addStep(
-  steps,
-  "P1 entre en section critique",
-  "P1 a reçu tous les ACK et sa requête est la plus prioritaire.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-exitCS(1, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 sort de la section critique",
-  "P1 libère la ressource critique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REL", 1, 2, "L(1,8)", 8, 9, 700, 75, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 envoie LIB à P2",
-  "P2 apprend que P1 a libéré la section critique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REL", 1, 3, "L(1,8)", 8, 9, 700, 90, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P1 envoie LIB à P3",
-  "P3 apprend aussi que P1 a libéré la section critique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-enterCS(2, processes, events, logs);
-
-addStep(
-  steps,
-  "P2 entre en section critique",
-  "Après la libération de P1, la requête de P2 devient prioritaire.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-exitCS(2, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 sort de la section critique",
-  "P2 termine son accès à la ressource critique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REL", 2, 1, "L(2,10)", 10, 11, 900, 80, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 envoie LIB à P1",
-  "P1 apprend que P2 a libéré la section critique.",
-  processes,
-  queues,
-  events,
-  logs
-);
-
-sendMessage("REL", 2, 3, "L(2,10)", 10, 11, 900, 80, processes, queues, events, logs);
-
-addStep(
-  steps,
-  "P2 envoie LIB à P3",
-  "Fin du scénario : P1 puis P2 ont accédé à la section critique sans conflit.",
-  processes,
-  queues,
-  events,
-  logs
-);
+    addStep(
+      steps,
+      result.title,
+      result.description,
+      processes,
+      queues,
+      events,
+      logs
+    );
+  }
 
   return steps;
 }
 
-export const lamportSteps = generateLamportScenario();4
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export const lamportSteps = generateLamportScenario();
