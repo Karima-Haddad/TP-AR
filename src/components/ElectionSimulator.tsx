@@ -271,8 +271,8 @@ export default function ElectionSimulator({
                 <div className="remarques-title">REMARQUES</div>
                 {cur.remarques.map((r, i) => (
                   <div key={i} className="remarque-item">
-                    <span className="remarque-icon">{r[0]}</span>
-                    <span>{r.slice(2)}</span>
+                    <span className="remarque-bullet">•</span>
+                    <span>{r}</span>
                   </div>
                 ))}
               </div>
@@ -308,35 +308,81 @@ export default function ElectionSimulator({
           <div className="progress-fill" style={{ width: `${((step + 1) / total) * 100}%` }} />
         </div>
         <div className="controls">
-          {/* Play */}
-          <button className="ctrl-btn primary" onClick={() => setPlaying(p => !p)} title="Play/Pause">
-            {playing
-              ? <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
-                  <rect x="4" y="3" width="3" height="10" rx="1" />
-                  <rect x="9" y="3" width="3" height="10" rx="1" />
-                </svg>
-              : <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
-                  <path d="M5 3.5l8 4.5-8 4.5z" />
-                </svg>
-            }
+          <button
+            className="ctrl-btn primary play-btn"
+            onClick={() => setPlaying((p) => !p)}
+            title="Play/Pause"
+          >
+            {playing ? "⏸" : "▶"}
           </button>
-          {/* Précédent */}
-          <button className="ctrl-btn" onClick={() => { stopPlay(); setStep(s => Math.max(0, s - 1)); }} title="Précédent">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M10 4L6 8l4 4" />
+
+          <button
+            className="ctrl-btn"
+            onClick={() => {
+              stopPlay();
+              setStep((s) => Math.max(0, s - 1));
+            }}
+            title="Précédent"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            >
+              <path d="M10 4L5 8l5 4" />
+              <rect
+                x="4"
+                y="4"
+                width="1.5"
+                height="8"
+                rx="0.5"
+                fill="currentColor"
+                stroke="none"
+              />
             </svg>
           </button>
-          {/* Suivant */}
-          <button className="ctrl-btn" onClick={() => { stopPlay(); setStep(s => Math.min(total - 1, s + 1)); }} title="Suivant">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M6 4l4 4-4 4" />
+
+          <button
+            className="ctrl-btn"
+            onClick={() => {
+              stopPlay();
+              setStep((s) => Math.min(total - 1, s + 1));
+            }}
+            title="Suivant"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            >
+              <path d="M6 4l5 4-5 4" />
+              <rect
+                x="10.5"
+                y="4"
+                width="1.5"
+                height="8"
+                rx="0.5"
+                fill="currentColor"
+                stroke="none"
+              />
             </svg>
           </button>
-          {/* Reset */}
-          <button className="ctrl-btn" onClick={() => { stopPlay(); setStep(0); }} title="Réinitialiser">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M2 8a6 6 0 1 0 1.4-3.9" /><path d="M2 2v4h4" />
-            </svg>
+
+          <button
+            className="ctrl-btn"
+            onClick={() => {
+              stopPlay();
+              setStep(0);
+            }}
+            title="Réinitialiser"
+          >
+            ↺
           </button>
         </div>
       </div>

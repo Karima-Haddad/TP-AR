@@ -22,7 +22,7 @@ export default function Header() {
         </span>
       </div>
 
-      <NavLink to="/lamport" className="nav-tab">
+      <NavLink to="/lamport-horloge" className="nav-tab">
         <span className="tab-dot"></span>
         Horloges & causalité
       </NavLink>
@@ -32,12 +32,12 @@ export default function Header() {
         Snapshots
       </NavLink>
 
-      <NavLink to="/ricart" className="nav-tab">
+      <NavLink to="/mutex/lamport" className="nav-tab">
         <span className="tab-dot"></span>
         Exclusion mutuelle
       </NavLink>
 
-      <NavLink to="/election" className="nav-tab">
+      <NavLink to="/election/bully" className="nav-tab">
         <span className="tab-dot"></span>
         Élection
       </NavLink>

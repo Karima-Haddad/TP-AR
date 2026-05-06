@@ -21,9 +21,9 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       processes: makeProcs(N),
       highlight: [1, 2, 3, 4],
       remarques: [
-        '📌 Chang-Roberts : élection dans un anneau unidirectionnel.',
-        '🔑 Chaque processus envoie son propre id à son voisin de droite.',
-        '📐 Complexité moyenne : O(n log n) messages.',
+        ' Chang-Roberts : élection dans un anneau unidirectionnel.',
+        ' Chaque processus envoie son propre id à son voisin de droite.',
+        ' Complexité moyenne : O(n log n) messages.',
       ],
     },
     {
@@ -40,8 +40,8 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       ],
       highlight: [1, 2, 3, 4],
       remarques: [
-        '📨 Envoi simultané dans le sens horaire uniquement.',
-        '📐 N messages initiaux, un par processus.',
+        ' Envoi simultané dans le sens horaire uniquement.',
+        ' N messages initiaux, un par processus.',
       ],
     },
     {
@@ -56,9 +56,9 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       ],
       highlight: [2, 3],
       remarques: [
-        '🔍 Seul le plus grand id "survit" à chaque étape.',
-        '✂️ Les petits ids sont absorbés — réduction du trafic.',
-        '📐 Optimisation vs algorithme naïf O(n²).',
+        ' Seul le plus grand id "survit" à chaque étape.',
+        ' Les petits ids sont absorbés — réduction du trafic.',
+        ' Optimisation vs algorithme naïf O(n²).',
       ],
     },
     {
@@ -72,8 +72,8 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       ],
       highlight: [4],
       remarques: [
-        '⭐ Un processus est élu quand son propre id revient à lui.',
-        '✅ Garantie : le processus avec le plus grand id gagne toujours.',
+        ' Un processus est élu quand son propre id revient à lui.',
+        ' Garantie : le processus avec le plus grand id gagne toujours.',
       ],
     },
     {
@@ -89,8 +89,8 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       ],
       highlight: [4],
       remarques: [
-        '📢 Le coordinateur se propage dans l\'anneau.',
-        '📐 N-1 messages supplémentaires pour la notification.',
+        ' Le coordinateur se propage dans l\'anneau.',
+        ' N-1 messages supplémentaires pour la notification.',
       ],
     },
     {
@@ -101,9 +101,9 @@ export function runChangRobertsAlgorithm(): ElectionStep[] {
       processes: makeProcs(N, 4),
       highlight: [1, 2, 3, 4],
       remarques: [
-        '✅ Algorithme correct et terminaison garantie.',
-        '📐 Total : O(n log n) messages en moyenne, O(n²) au pire.',
-        '📌 Anneau unidirectionnel : aucune réponse directe nécessaire.',
+        ' Algorithme correct et terminaison garantie.',
+        ' Total : O(n log n) messages en moyenne, O(n²) au pire.',
+        ' Anneau unidirectionnel : aucune réponse directe nécessaire.',
       ],
     },
   ];
