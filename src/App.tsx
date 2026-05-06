@@ -1,8 +1,8 @@
-
+import ClockPage from './pages/ClockPage';
+import './index.css';
 
 function App() {
-
-  return <h1>hello world</h1> ;
+  return <ClockPage />;
 }
 
-export default App
+export default App;
