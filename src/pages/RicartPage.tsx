@@ -12,6 +12,21 @@ export default function RicartPage() {
 
   const currentStep = ricartSteps[stepIndex];
 
+  const messageStats = currentStep.events.reduce(
+    (acc, event) => {
+      if (event.type === "SEND_REQUEST") acc.request += 1;
+      if (event.type === "SEND_REPLY") acc.reply += 1;
+
+      return acc;
+    },
+    {
+      request: 0,
+      reply: 0,
+    }
+  );
+
+  const totalMessages = messageStats.request + messageStats.reply;
+
   const nextStep = () => {
     setStepIndex((prev) => Math.min(prev + 1, ricartSteps.length - 1));
   };
@@ -110,6 +125,25 @@ export default function RicartPage() {
                 })}
               </div>
 
+                <div className="ricart-message-stats-card">
+                  <div className="ricart-stats-header">
+                    <span className="ricart-stats-title">Messages échangés</span>
+                    <span className="ricart-stats-total">{totalMessages}</span>
+                  </div>
+
+                  <div className="ricart-stats-grid">
+                    <div className="ricart-stat-box ricart-stat-req">
+                      <span className="ricart-stat-label">REQUEST</span>
+                      <strong>{messageStats.request}</strong>
+                    </div>
+
+                    <div className="ricart-stat-box ricart-stat-reply">
+                      <span className="ricart-stat-label">REPLY</span>
+                      <strong>{messageStats.reply}</strong>
+                    </div>
+                  </div>
+                </div>
+                
               <div className="event-log">
                 {currentStep.logs.map((log, index) => (
                   <div className="log-line" key={index}>

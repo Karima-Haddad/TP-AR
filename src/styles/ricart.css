@@ -402,3 +402,79 @@
   display: block;
 }
 
+
+.ricart-message-stats-card {
+  margin: 10px 12px;
+  padding: 12px;
+  border: 1px solid #e9ebf2;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8faff);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.ricart-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ricart-stats-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ricart-stats-total {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ricart-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.ricart-stat-box {
+  padding: 9px 6px;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.ricart-stat-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.ricart-stat-box strong {
+  font-family: "DM Mono", monospace;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ricart-stat-req {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.18);
+  color: #2563eb;
+}
+
+.ricart-stat-reply {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.18);
+  color: #059669;
+}
