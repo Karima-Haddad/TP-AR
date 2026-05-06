@@ -10,24 +10,28 @@ type IconType =
   | "token"
   | "ticket"
   | "crown"
-  | "ring";
+  | "ring"
+  | "fifo"
+  | "causal"
+  | "sequencer";
+  
 
 const groups = {
   sync: {
     title: "HORLOGES & CAUSALITÉ",
     algos: [
       {
-        path: "/lamport-horloge",
+        path: "/clocks/lamport",
         label: "Horloge de Lamport",
         icon: "clock" as const,
       },
       {
-        path: "/vector",
+        path: "/clocks/vector",
         label: "Horloges vectorielles",
         icon: "vector" as const,
       },
       {
-        path: "/matrix",
+        path: "/clocks/matrix",
         label: "Horloges matricielles",
         icon: "matrix" as const,
       },
@@ -77,6 +81,26 @@ const groups = {
         path: "/election/lelann",
         label: "LeLann Election",
         icon: "token" as const,
+      },
+    ],
+  },
+  diffusion: {
+    title: "DIFFUSION DE MESSAGES",
+    algos: [
+      {
+        path: "/diffusion/fifo",
+        label: "FIFO",
+        icon: "fifo" as const,
+      },
+      {
+        path: "/diffusion/causal",
+        label: "Causal",
+        icon: "causal" as const,
+      },
+      {
+        path: "/diffusion/sequencer",
+        label: "Séquenceur",
+        icon: "sequencer" as const,
       },
     ],
   },
@@ -168,6 +192,38 @@ function renderIcon(type: IconType) {
           <path d="M12 4v4" />
         </svg>
       );
+    
+    case "fifo":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M4 7h12" />
+          <path d="M4 12h10" />
+          <path d="M4 17h8" />
+          <path d="M17 8l3 4-3 4" />
+        </svg>
+      );
+
+    case "causal":
+      return (
+        <svg viewBox="0 0 24 24">
+          <circle cx="6" cy="7" r="2" />
+          <circle cx="18" cy="7" r="2" />
+          <circle cx="12" cy="17" r="2" />
+          <path d="M8 8.5l3 6" />
+          <path d="M16 8.5l-3 6" />
+          <path d="M6 9v5" />
+        </svg>
+      );
+
+    case "sequencer":
+      return (
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="6" r="2.5" />
+          <path d="M12 9v4" />
+          <path d="M5 18h14" />
+          <path d="M7 14h10v4H7z" />
+        </svg>
+      );
   }
 }
 
@@ -175,6 +231,14 @@ export default function Sidebar() {
   const { pathname } = useLocation();
 
   let group: GroupType = groups.sync;
+
+  if (pathname.includes("/clocks")) {
+    group = groups.sync;
+  }
+
+  if (pathname.includes("/diffusion")) {
+    group = groups.diffusion;
+  }
 
   if (pathname.includes("/mutex")) {
     group = groups.mutex;

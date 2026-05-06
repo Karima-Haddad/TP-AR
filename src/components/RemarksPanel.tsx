@@ -37,6 +37,7 @@ export default function RemarksPanel({ step, stepIndex, totalSteps }: Props) {
       <div className="remarks-list">
         {step.remarks.map((r, i) => (
           <div key={i} className="remark-item">
+            <div className="remark-bullet">•</div>
             <div className="remark-text">{r}</div>
           </div>
         ))}

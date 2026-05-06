@@ -73,46 +73,10 @@ const ClockPage: FC = () => {
 
   return (
     <>
-      <nav className="navbar">
-        <div className="logo">
-          <div className="logo-mark">
-            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="7" cy="7" r="2" fill="white"/>
-              <circle cx="2" cy="3" r="1.5" fill="white" opacity="0.7"/>
-              <circle cx="12" cy="3" r="1.5" fill="white" opacity="0.7"/>
-              <circle cx="2" cy="11" r="1.5" fill="white" opacity="0.7"/>
-              <circle cx="12" cy="11" r="1.5" fill="white" opacity="0.7"/>
-              <line x1="3.3" y1="3.7" x2="5.7" y2="5.7" stroke="white" strokeWidth="0.8" opacity="0.5"/>
-              <line x1="10.7" y1="3.7" x2="8.3" y2="5.7" stroke="white" strokeWidth="0.8" opacity="0.5"/>
-              <line x1="3.3" y1="10.3" x2="5.7" y2="8.3" stroke="white" strokeWidth="0.8" opacity="0.5"/>
-              <line x1="10.7" y1="10.3" x2="8.3" y2="8.3" stroke="white" strokeWidth="0.8" opacity="0.5"/>
-            </svg>
-          </div>
-          DistribuLab
-        </div>
-        <button className="nav-tab active"><span className="tab-dot" /> Horloges &amp; causalité</button>
-        <button className="nav-tab" style={{ opacity: 0.4, cursor: 'default' }}><span className="tab-dot" /> Snapshots</button>
-        <button className="nav-tab" style={{ opacity: 0.4, cursor: 'default' }}><span className="tab-dot" /> Exclusion mutuelle</button>
-        <button className="nav-tab" style={{ opacity: 0.4, cursor: 'default' }}><span className="tab-dot" /> Élection</button>
-        <div className="nav-spacer" />
-        <div className="nav-info">
-          <span><span className="status-dot" />Simulateur actif</span>
-          <span>5 processus · anneau</span>
-        </div>
-      </nav>
+      
 
       <div className="layout">
-        <aside className="sidebar">
-          <div className="sidebar-group">
-            <div className="sidebar-label">Horloges &amp; causalité</div>
-            {ALGOS.map(a => (
-              <button key={a} className={`algo-btn${algo === a ? ' active' : ''}`} onClick={() => handleSelectAlgo(a)}>
-                <span className="algo-icon">{ALGO_CONFIG[a].icon}</span>
-                {ALGO_CONFIG[a].label}
-              </button>
-            ))}
-          </div>
-        </aside>
+        
 
         <div className="main">
           <div className="algo-header">

@@ -139,29 +139,6 @@ body {
   overflow: hidden;
 }
 
-/* ─── SIDEBAR ──────────────────────────── */
-.sidebar {
-  width: 190px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  padding: 12px 8px;
-  overflow-y: auto;
-}
-
-.sidebar-group { margin-bottom: 24px; }
-
-.sidebar-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text3);
-  padding: 0 8px;
-  margin-bottom: 6px;
-}
 
 .algo-btn {
   width: 100%;
@@ -259,17 +236,6 @@ body {
     linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
-}
-
-/* ─── RIGHT PANEL ──────────────────────── */
-.rpanel {
-  width: 220px;           /* réduit de 280 → 220px */
-  border-left: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
 }
 
 .rpanel-tabs {
