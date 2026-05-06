@@ -22,21 +22,31 @@ export default function Header() {
         </span>
       </div>
 
+      {/* HORLOGES */}
       <NavLink to="/lamport-horloge" className="nav-tab">
         <span className="tab-dot"></span>
         Horloges & causalité
       </NavLink>
 
+      {/* DIFFUSION */}
+      <NavLink to="/diffusion/fifo" className="nav-tab">
+        <span className="tab-dot"></span>
+        Diffusion
+      </NavLink>
+
+      {/* SNAPSHOTS */}
       <NavLink to="/snapshot" className="nav-tab">
         <span className="tab-dot"></span>
         Snapshots
       </NavLink>
 
+      {/* MUTEX */}
       <NavLink to="/mutex/lamport" className="nav-tab">
         <span className="tab-dot"></span>
         Exclusion mutuelle
       </NavLink>
 
+      {/* ELECTION */}
       <NavLink to="/election/bully" className="nav-tab">
         <span className="tab-dot"></span>
         Élection
