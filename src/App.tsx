@@ -1,3 +1,11 @@
+import ClockPage from './pages/ClockPage';
+import './index.css';
+
+function App() {
+  return <ClockPage />;
+}
+
+export default App;
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 /*import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./common/Header";
