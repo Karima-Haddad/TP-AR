@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+/*import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "./common/Header";
 import Sidebar from "./common/SideBar";
 import LamportPage from "./pages/LamportPage";
@@ -31,4 +30,11 @@ function App() {
   );
 }
 
-export default App;
+export default App;*/
+
+import { RouterProvider } from 'react-router-dom';
+import { router } from './router/index';
+
+export default function App() {
+  return <RouterProvider router={router} />;
+}
