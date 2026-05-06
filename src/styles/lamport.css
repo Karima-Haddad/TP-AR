@@ -187,7 +187,7 @@ body {
 .rtab:hover {
   color: var(--text);
   background: white;
-  border-bottom: var(--accent) 3px solid;
+
 }
 
 .rpanel-body {
@@ -1187,4 +1187,90 @@ body,
   background: rgba(217, 119, 6, 0.08);
   border-color: rgba(217, 119, 6, 0.18);
   color: #d97706;
+}
+
+
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.app {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f7;
+}
+
+.app-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* IMPORTANT */
+.lamport-page,
+.ricart-page {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.algo-header {
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+}
+
+.sim-wrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.rpanel {
+  width: 390px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.timeline-scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.timeline-svg {
+  width: 1500px;
+  min-width: 1500px;
+  height: 650px;
+  display: block;
 }

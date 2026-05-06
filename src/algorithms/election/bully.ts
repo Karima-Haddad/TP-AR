@@ -41,9 +41,9 @@ export function runBullyAlgorithm(): ElectionStep[] {
       processes: makeProcs(N, 5, 5),
       highlight: [5],
       remarques: [
-        '⚡ Bully Algorithm : élit le processus avec le plus grand id actif.',
-        '📌 Détection par timeout de heartbeat périodique.',
-        '🔴 P5 (id=5, coordinateur) ne répond plus aux messages.',
+        ' Bully Algorithm : élit le processus avec le plus grand id actif.',
+        ' Détection par timeout de heartbeat périodique.',
+        ' P5 (id=5, coordinateur) ne répond plus aux messages.',
       ],
     },
     {
@@ -59,9 +59,9 @@ export function runBullyAlgorithm(): ElectionStep[] {
       ],
       highlight: [1],
       remarques: [
-        '📨 Envoi uniquement vers les processus de rang supérieur (id > 1).',
-        '⏱ P1 attend une réponse OK pendant un délai T.',
-        '📐 Si aucune réponse → P1 se proclame coordinateur.',
+        ' Envoi uniquement vers les processus de rang supérieur (id > 1).',
+        ' P1 attend une réponse OK pendant un délai T.',
+        ' Si aucune réponse → P1 se proclame coordinateur.',
       ],
     },
     {
@@ -77,8 +77,8 @@ export function runBullyAlgorithm(): ElectionStep[] {
       ],
       highlight: [2, 3, 4],
       remarques: [
-        '📥 Chaque Pi avec id > expéditeur répond OK et lance sa propre élection.',
-        '✅ P1 reçoit au moins un OK → il abandonne et attend le résultat.',
+        ' Chaque Pi avec id > expéditeur répond OK et lance sa propre élection.',
+        ' P1 reçoit au moins un OK → il abandonne et attend le résultat.',
       ],
     },
     {
@@ -89,8 +89,8 @@ export function runBullyAlgorithm(): ElectionStep[] {
       processes: makeProcs(N, 5, 4),
       highlight: [4],
       remarques: [
-        '⚡ Le processus le plus fort sans réponse supérieure s\'auto-élit.',
-        '📌 P4 envoie ELECTION à P5 uniquement — aucune réponse → P4 gagne.',
+        ' Le processus le plus fort sans réponse supérieure s\'auto-élit.',
+        ' P4 envoie ELECTION à P5 uniquement — aucune réponse → P4 gagne.',
       ],
     },
     {
@@ -106,8 +106,8 @@ export function runBullyAlgorithm(): ElectionStep[] {
       ],
       highlight: [4],
       remarques: [
-        '📢 Message COORDINATOR diffusé à tous les processus vivants.',
-        '📐 Chaque receveur met à jour son pointeur vers le coordinateur.',
+        ' Message COORDINATOR diffusé à tous les processus vivants.',
+        ' Chaque receveur met à jour son pointeur vers le coordinateur.',
       ],
     },
     {
@@ -118,9 +118,9 @@ export function runBullyAlgorithm(): ElectionStep[] {
       processes: makeProcs(N, 5, 4),
       highlight: [1, 2, 3, 4],
       remarques: [
-        '✅ Correction : le coordinateur élu est toujours le plus grand id actif.',
-        '📐 Complexité : O(N²) messages dans le pire cas.',
-        '⚠️ Hypothèse : les pannes sont détectables par timeout.',
+        ' Correction : le coordinateur élu est toujours le plus grand id actif.',
+        ' Complexité : O(N²) messages dans le pire cas.',
+        ' Hypothèse : les pannes sont détectables par timeout.',
       ],
     },
   ];

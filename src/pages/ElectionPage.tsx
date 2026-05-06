@@ -1,6 +1,7 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { ELECTION_ROUTES } from '../router';
 import ElectionSimulator from '../components/ElectionSimulator';
+import "../styles/election.css";
 
 const ALGO_META: Record<string, {
   sub: string;
@@ -42,21 +43,17 @@ export default function ElectionPage() {
   const nProcs = steps[0]?.processes?.length ?? 5;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/*
-        key={current.path} → React démonte/remonte ElectionSimulator
-        à chaque changement d'algo → reset complet de l'état interne
-      */}
-      <ElectionSimulator
-        key={current.path}
-        steps={steps}
-        algoLabel={current.label}
-        algoSub={meta.sub}
-        algoTag={meta.tag}
-        algoTagClass={meta.tagClass}
-        metaProcs={`${nProcs} processus`}
-        metaTopo={meta.topo}
-      />
-    </div>
-  );
+  <div className="election-page">
+    <ElectionSimulator
+      key={current.path}
+      steps={steps}
+      algoLabel={current.label}
+      algoSub={meta.sub}
+      algoTag={meta.tag}
+      algoTagClass={meta.tagClass}
+      metaProcs={`${nProcs} processus`}
+      metaTopo={meta.topo}
+    />
+  </div>
+);
 }

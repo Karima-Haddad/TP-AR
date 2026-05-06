@@ -8,37 +8,81 @@ type IconType =
   | "lock"
   | "handshake"
   | "token"
-  | "ticket";
+  | "ticket"
+  | "crown"
+  | "ring";
 
 const groups = {
   sync: {
     title: "HORLOGES & CAUSALITÉ",
     algos: [
-      { path: "/lamport-horloge", label: "Horloge de Lamport", icon: "clock" },
-      { path: "/vector", label: "Horloges vectorielles", icon: "vector" },
-      { path: "/matrix", label: "Horloges matricielles", icon: "matrix" },
+      {
+        path: "/lamport-horloge",
+        label: "Horloge de Lamport",
+        icon: "clock" as const,
+      },
+      {
+        path: "/vector",
+        label: "Horloges vectorielles",
+        icon: "vector" as const,
+      },
+      {
+        path: "/matrix",
+        label: "Horloges matricielles",
+        icon: "matrix" as const,
+      },
     ],
   },
+
   mutex: {
     title: "EXCLUSION MUTUELLE",
     algos: [
-      { path: "/lamport", label: "Lamport Mutex", icon: "lock" },
-      { path: "/ricart", label: "Ricart-Agrawala", icon: "handshake" },
-      { path: "/lelann", label: "LeLann", icon: "token" },
-      { path: "/ricarttoken", label: "Ricart-Token", icon: "ticket" },
+      {
+        path: "/mutex/lamport",
+        label: "Lamport Mutex",
+        icon: "lock" as const,
+      },
+      {
+        path: "/mutex/ricart",
+        label: "Ricart-Agrawala",
+        icon: "handshake" as const,
+      },
+      {
+        path: "/mutex/lelann",
+        label: "LeLann",
+        icon: "token" as const,
+      },
+      {
+        path: "/mutex/ricarttoken",
+        label: "Ricart-Token",
+        icon: "ticket" as const,
+      },
     ],
   },
-} satisfies Record<
-  string,
-  {
-    title: string;
-    algos: {
-      path: string;
-      label: string;
-      icon: IconType;
-    }[];
-  }
->;
+
+  election: {
+    title: "ALGORITHMES D'ÉLECTION",
+    algos: [
+      {
+        path: "/election/bully",
+        label: "Bully",
+        icon: "crown" as const,
+      },
+      {
+        path: "/election/chang-roberts",
+        label: "Chang-Roberts",
+        icon: "ring" as const,
+      },
+      {
+        path: "/election/lelann",
+        label: "LeLann Election",
+        icon: "token" as const,
+      },
+    ],
+  },
+};
+
+type GroupType = (typeof groups)[keyof typeof groups];
 
 function renderIcon(type: IconType) {
   switch (type) {
@@ -109,19 +153,36 @@ function renderIcon(type: IconType) {
           <path d="M10 12h4" />
         </svg>
       );
+
+    case "crown":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M4 18l2-10 6 5 6-5 2 10H4z" />
+        </svg>
+      );
+
+    case "ring":
+      return (
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 4v4" />
+        </svg>
+      );
   }
 }
 
 export default function Sidebar() {
   const { pathname } = useLocation();
 
-  const group =
-    pathname.includes("ricart") ||
-    pathname.includes("mutex") ||
-    pathname.includes("lelann") ||
-    pathname.includes("lamport")
-      ? groups.mutex
-      : groups.sync;
+  let group: GroupType = groups.sync;
+
+  if (pathname.includes("/mutex")) {
+    group = groups.mutex;
+  }
+
+  if (pathname.includes("/election")) {
+    group = groups.election;
+  }
 
   return (
     <aside className="sidebar">
@@ -129,9 +190,18 @@ export default function Sidebar() {
         <div className="sidebar-label">{group.title}</div>
 
         {group.algos.map((algo) => (
-          <NavLink key={algo.path} to={algo.path} className="algo-btn">
-            <span className="algo-icon">{renderIcon(algo.icon)}</span>
-            <span className="algo-text">{algo.label}</span>
+          <NavLink
+            key={algo.path}
+            to={algo.path}
+            className="algo-btn"
+          >
+            <span className="algo-icon">
+              {renderIcon(algo.icon)}
+            </span>
+
+            <span className="algo-text">
+              {algo.label}
+            </span>
           </NavLink>
         ))}
       </div>

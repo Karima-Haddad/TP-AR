@@ -20,9 +20,9 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       processes: makeProcs(N),
       highlight: [1, 2, 3, 4],
       remarques: [
-        '○ Le Lann (anneau) : précurseur de Chang-Roberts (1977).',
-        '📌 Anneau unidirectionnel — messages circulent dans un seul sens.',
-        '📐 Chaque processus est initialement candidat à l\'élection.',
+        ' Le Lann (anneau) : précurseur de Chang-Roberts (1977).',
+        ' Anneau unidirectionnel — messages circulent dans un seul sens.',
+        ' Chaque processus est initialement candidat à l\'élection.',
       ],
     },
     {
@@ -39,8 +39,8 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       ],
       highlight: [1, 2, 3, 4],
       remarques: [
-        '📨 Sens : sens horaire uniquement.',
-        '📐 Phase 1 : N messages initiaux.',
+        ' Sens : sens horaire uniquement.',
+        ' Phase 1 : N messages initiaux.',
       ],
     },
     {
@@ -56,9 +56,9 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       ],
       highlight: [1, 2, 3],
       remarques: [
-        '🔍 Seul le maximum global progresse dans l\'anneau.',
-        '✂️ Les ids inférieurs sont supprimés à chaque nœud.',
-        '📌 Différence avec Chang-Roberts : pas d\'optimisation supplémentaire.',
+        ' Seul le maximum global progresse dans l\'anneau.',
+        ' Les ids inférieurs sont supprimés à chaque nœud.',
+        ' Différence avec Chang-Roberts : pas d\'optimisation supplémentaire.',
       ],
     },
     {
@@ -72,8 +72,8 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       ],
       highlight: [4],
       remarques: [
-        '⭐ Condition de victoire : recevoir son propre id après un tour.',
-        '✅ Garantie : le plus grand id gagne toujours.',
+        ' Condition de victoire : recevoir son propre id après un tour.',
+        ' Garantie : le plus grand id gagne toujours.',
       ],
     },
     {
@@ -89,8 +89,8 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       ],
       highlight: [4],
       remarques: [
-        '📢 Propagation inverse pour la notification (sens antihoraire ou second passage).',
-        '📐 N-1 messages supplémentaires.',
+        ' Propagation inverse pour la notification (sens antihoraire ou second passage).',
+        ' N-1 messages supplémentaires.',
       ],
     },
     {
@@ -101,9 +101,9 @@ export function runLeLannAlgorithm(): ElectionStep[] {
       processes: makeProcs(N, 4),
       highlight: [1, 2, 3, 4],
       remarques: [
-        '✅ Terminaison garantie en anneau sans panne.',
-        '📐 Complexité : O(n²) messages dans le pire cas.',
-        '📌 Algorithme fondateur — base de Chang-Roberts et des variantes modernes.',
+        ' Terminaison garantie en anneau sans panne.',
+        ' Complexité : O(n²) messages dans le pire cas.',
+        ' Algorithme fondateur — base de Chang-Roberts et des variantes modernes.',
       ],
     },
   ];
