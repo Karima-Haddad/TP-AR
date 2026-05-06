@@ -1,8 +1,21 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import CutPage from "./pages/CutPage";
+import GlobalStatePage from "./pages/GlobalStatePage";
+import ChandyPage from "./pages/ChandyPage";
 
 function App() {
-
-  return <h1>hello world</h1> ;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/cut" replace />} />
+        <Route path="/cut" element={<CutPage />} />
+        <Route path="/global" element={<GlobalStatePage />} />
+        <Route path="/chandy" element={<ChandyPage />} />
+        <Route path="*" element={<Navigate to="/cut" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
