@@ -13,6 +13,7 @@ import LeLannPage from "../pages/leLannPage";
 import RicartTokenPage from "../pages/RicartTokenPage";
 
 import ElectionPage from "../pages/ElectionPage";
+import ClockPage from "../pages/ClockPage";
 
 function RootLayout() {
   return (
@@ -38,6 +39,11 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <Navigate to="/mutex/lamport" replace />,
+      },
+
+      {
+        path: "clocks/:algo",
+        element: <ClockPage />,
       },
 
       {

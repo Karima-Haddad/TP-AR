@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { AlgoDef } from '../types/diffusion';
-import SimCanvas from '../components/SimCanvas';
+import DiffusionSim from '../components/DiffusionSimCanvas';
 import RemarksPanel from '../components/RemarksPanel';
 import "../styles/diffusion.css";
 interface Props {
@@ -65,7 +65,7 @@ export default function DiffusionPageBase({ algo }: Props) {
 
     <div className="content">
       <div className="sim-wrap">
-        <SimCanvas
+        <DiffusionSim
           step={currentStep}
           algoId={algo.id}
           stepIndex={stepIndex}

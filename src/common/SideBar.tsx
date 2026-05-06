@@ -21,17 +21,17 @@ const groups = {
     title: "HORLOGES & CAUSALITÉ",
     algos: [
       {
-        path: "/lamport-horloge",
+        path: "/clocks/lamport",
         label: "Horloge de Lamport",
         icon: "clock" as const,
       },
       {
-        path: "/vector",
+        path: "/clocks/vector",
         label: "Horloges vectorielles",
         icon: "vector" as const,
       },
       {
-        path: "/matrix",
+        path: "/clocks/matrix",
         label: "Horloges matricielles",
         icon: "matrix" as const,
       },
@@ -231,6 +231,10 @@ export default function Sidebar() {
   const { pathname } = useLocation();
 
   let group: GroupType = groups.sync;
+
+  if (pathname.includes("/clocks")) {
+    group = groups.sync;
+  }
 
   if (pathname.includes("/diffusion")) {
     group = groups.diffusion;

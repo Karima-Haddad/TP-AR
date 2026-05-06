@@ -23,7 +23,7 @@ export default function Header() {
       </div>
 
       {/* HORLOGES */}
-      <NavLink to="/lamport-horloge" className="nav-tab">
+      <NavLink to="/clocks/lamport" className="nav-tab">
         <span className="tab-dot"></span>
         Horloges & causalité
       </NavLink>
