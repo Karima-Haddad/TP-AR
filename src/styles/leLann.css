@@ -1,0 +1,426 @@
+.lelann-page .sim-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #f8faff;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.04) 0%, transparent 50%);
+}
+
+.lelann-page .sim-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+.lelann-svg {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.lelann-svg-title {
+  fill: #2563eb;
+  font-size: 11px;
+  font-family: "DM Mono", monospace;
+  opacity: 0.55;
+}
+
+.lelann-ring-edge {
+  stroke: rgba(0, 0, 0, 0.08);
+  stroke-width: 1;
+}
+
+.lelann-active-edge {
+  stroke: #2563eb;
+  stroke-width: 1.6;
+  opacity: 0.75;
+}
+
+.lelann-packet {
+  opacity: 0.9;
+}
+
+.lelann-node-title {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: "DM Sans", sans-serif;
+}
+
+.lelann-node-state {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-size: 10px;
+  font-family: "DM Mono", monospace;
+  opacity: 0.75;
+}
+
+
+.lelann-sc-badge {
+  fill: rgba(217, 119, 6, 0.1);
+  stroke: rgba(217, 119, 6, 0.35);
+  stroke-width: 1;
+}
+
+.lelann-sc-text {
+  text-anchor: middle;
+  font-size: 9px;
+  font-weight: 700;
+  fill: #d97706;
+  font-family: "DM Mono", monospace;
+}
+
+.lelann-legend {
+  fill: #94a3b8;
+  font-size: 10px;
+  font-family: "DM Mono", monospace;
+}
+
+
+
+.lg-req {
+  fill: rgba(217, 119, 6, 0.12);
+  stroke: #d97706;
+}
+
+.lg-sc {
+  fill: rgba(217, 119, 6, 0.12);
+  stroke: #d97706;
+}
+
+
+
+
+
+
+
+
+.lelann-page {
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0 !important;
+}
+
+
+.lelann-page .sim-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lelann-page .rpanel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lelann-page .rpanel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lelann-page .event-log {
+  flex: 0 0 auto;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.lelann-page .bottom-bar {
+  flex: 0 0 62px;
+  height: 62px;
+  position: relative;
+}
+
+
+.lelann-req-ring {
+  fill: rgba(245, 158, 11, 0.08);
+  stroke: #f59e0b;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  animation: reqPulse 1.2s ease-in-out infinite alternate;
+}
+
+.lelann-req-badge {
+  fill: rgba(245, 158, 11, 0.14);
+  stroke: rgba(245, 158, 11, 0.5);
+}
+
+.lelann-req-text {
+  text-anchor: middle;
+  font-size: 9px;
+  font-weight: 800;
+  fill: #d97706;
+  font-family: "DM Mono", monospace;
+}
+
+.lelann-sc-light {
+  fill: rgba(249, 115, 22, 0.18);
+  filter: url(#scGlow);
+  animation: scLight 1s ease-in-out infinite alternate;
+}
+
+.lelann-sc-ring {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 3;
+  stroke-dasharray: 8 4;
+  animation: scRotate 1.8s linear infinite;
+  transform-origin: center;
+}
+
+.lelann-sc-badge {
+  fill: rgba(249, 115, 22, 0.16);
+  stroke: rgba(249, 115, 22, 0.75);
+  stroke-width: 1.5;
+}
+
+.lelann-sc-text {
+  text-anchor: middle;
+  font-size: 9px;
+  font-weight: 900;
+  fill: #ea580c;
+  font-family: "DM Mono", monospace;
+}
+
+.lelann-token-box {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 1;
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.55));
+}
+
+.lelann-token-dot {
+  fill: #ffffff;
+}
+
+.lelann-token-label {
+  font-size: 10px;
+  font-weight: 900;
+  fill: #ffffff;
+  font-family: "DM Mono", monospace;
+}
+
+@keyframes reqPulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scLight {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+@keyframes scRotate {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   Le Lann — thème raffiné
+   ───────────────────────────────────────────────────── */
+
+.lelann-svg {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Anneau ─────────────────────────────────────────── */
+
+.lelann-ring-edge {
+  stroke: #cbd5e1;
+  stroke-width: 1.5;
+  stroke-dasharray: 9 7;
+}
+
+/* ─── Flèche active ──────────────────────────────────── */
+
+.lelann-active-edge {
+  stroke: #3b82f6;
+  stroke-width: 2.5;
+  stroke-dasharray: 10 6;
+  opacity: 0.9;
+  animation: tokenRoad 0.7s linear infinite;
+}
+
+/* ─── Paquet animé ───────────────────────────────────── */
+
+.lelann-packet {
+  opacity: 0.95;
+}
+
+/* ─── Labels nœuds ───────────────────────────────────── */
+
+.lelann-node-title {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+.lelann-node-state {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: "DM Mono", "Courier New", monospace;
+  letter-spacing: 0.06em;
+  opacity: 0.78;
+}
+
+/* ─── Badge WAIT — demandeur ─────────────────────────── */
+
+.lelann-req-ring {
+  fill: rgba(245, 158, 11, 0.08);
+  stroke: #f59e0b;
+  stroke-width: 1.8;
+  stroke-dasharray: 6 4;
+  animation: reqPulse 0.9s ease-in-out infinite alternate;
+}
+
+.lelann-req-badge {
+  fill: #fffbeb;
+  stroke: #fbbf24;
+  stroke-width: 1.2;
+}
+
+.lelann-req-text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 8px;
+  font-weight: 800;
+  fill: #b45309;
+  font-family: "DM Mono", "Courier New", monospace;
+  letter-spacing: 0.07em;
+}
+
+/* ─── Badge IN SC — section critique ─────────────────── */
+
+.lelann-sc-light {
+  fill: rgba(249, 115, 22, 0.18);
+  animation: scLight 0.85s ease-in-out infinite alternate;
+}
+
+.lelann-sc-ring {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  animation: scRotate 1.1s linear infinite;
+}
+
+.lelann-sc-badge {
+  fill: #fff7ed;
+  stroke: #fb923c;
+  stroke-width: 1.2;
+}
+
+.lelann-sc-text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 8px;
+  font-weight: 800;
+  fill: #c2410c;
+  font-family: "DM Mono", "Courier New", monospace;
+  letter-spacing: 0.07em;
+}
+
+/* ─── Token pill ─────────────────────────────────────── */
+
+.lelann-token-box {
+  fill: #1d4ed8;
+  /* stroke: #ffffff;
+  stroke-width: 2; */
+  width: 80px;
+}
+
+.lelann-token-dot {
+  fill: #ffffff;
+}
+
+.lelann-token-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #ffffff;
+  letter-spacing: 0.06em;
+  font-family: "DM Mono", "Courier New", monospace;
+  dominant-baseline: central;
+}
+
+/* ─── Légende ────────────────────────────────────────── */
+
+.lelann-legend {
+  fill: #94a3b8;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: "DM Mono", "Courier New", monospace;
+  dominant-baseline: central;
+}
+
+/* .lg-token {
+  fill: rgba(29, 78, 216, 0.12);
+  stroke: #3b82f6;
+  stroke-width: 1.2;
+} */
+
+.lg-req {
+  fill: rgba(245, 158, 11, 0.12);
+  stroke: #f59e0b;
+  stroke-width: 1.2;
+}
+
+.lg-sc {
+  fill: rgba(249, 115, 22, 0.15);
+  stroke: #f97316;
+  stroke-width: 1.2;
+}
+
+/* ─── Animations ─────────────────────────────────────── */
+
+@keyframes tokenRoad {
+  from { stroke-dashoffset: 16; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes reqPulse {
+  from { opacity: 0.5; stroke-width: 1.5; }
+  to   { opacity: 1;   stroke-width: 2.2; }
+}
+
+@keyframes scLight {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+@keyframes scRotate {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -26; }
+}
