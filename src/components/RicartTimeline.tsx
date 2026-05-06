@@ -85,8 +85,7 @@ export default function RicartTimeline({ step }: Props) {
           if (
               event.type !== "SEND_REQUEST" &&
               event.type !== "SEND_REPLY" &&
-              event.type !== "RECEIVE_REQUEST" &&
-              event.type !== "RECEIVE_REPLY"
+              event.type !== "RECEIVE_REQUEST"
             ) {
               return null;
             }

@@ -9,6 +9,24 @@ export default function LamportPage() {
   const panelRef = useRef<HTMLDivElement>(null);
   const currentStep = lamportSteps[stepIndex];
 
+  const messageStats = currentStep.events.reduce(
+    (acc, event) => {
+      if (event.type === "REQ") acc.req += 1;
+      if (event.type === "ACQ") acc.ack += 1;
+      if (event.type === "REL") acc.lib += 1;
+
+      return acc;
+    },
+    {
+      req: 0,
+      ack: 0,
+      lib: 0,
+    }
+  );
+
+  const totalMessages =
+    messageStats.req + messageStats.ack + messageStats.lib;
+
   const nextStep = () => {
     setStepIndex((prev) => Math.min(prev + 1, lamportSteps.length - 1));
   };
@@ -112,6 +130,31 @@ export default function LamportPage() {
                         </div>
                     );
                     })}
+                </div>
+
+
+                <div className="message-stats-card">
+                  <div className="stats-header">
+                    <span className="stats-title">Messages échangés</span>
+                    <span className="stats-total">{totalMessages}</span>
+                  </div>
+
+                  <div className="stats-grid">
+                    <div className="stat-box stat-req">
+                      <span className="stat-label">REQ</span>
+                      <strong>{messageStats.req}</strong>
+                    </div>
+
+                    <div className="stat-box stat-ack">
+                      <span className="stat-label">ACK</span>
+                      <strong>{messageStats.ack}</strong>
+                    </div>
+
+                    <div className="stat-box stat-lib">
+                      <span className="stat-label">LIB</span>
+                      <strong>{messageStats.lib}</strong>
+                    </div>
+                  </div>
                 </div>
 
 

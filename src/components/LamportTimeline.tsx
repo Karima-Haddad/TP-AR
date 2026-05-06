@@ -14,6 +14,11 @@ const processY: Record<number, number> = {
 const SVG_WIDTH = 1050;
 const AXIS_START = 70;
 const AXIS_END = 1280;
+const SC_WIDTH: Record<number, number> = {
+  1: 142,
+  2: 125,
+  3: 180,
+};
 
 const eventX = (event: LamportEvent) => {
   // priorité : position manuelle
@@ -445,23 +450,17 @@ function CriticalSectionLine({
 
         const y = processY[enter.from];
 
-        const exit = step.events.find(
-          (e) => e.type === "EXIT_CS" && e.from === enter.from
-        );
-
         let x1: number;
-        let x2: number;
 
         if (enter.from === 1) {
           x1 = eventX(enter) - 215;
-          x2 = exit ? eventX(exit) - 120 : x1 + 20;
         } else if (enter.from === 2) {
           x1 = eventX(enter) - 315;
-          x2 = exit ? eventX(exit) - 140 : x1 + 45;
         } else {
           x1 = eventX(enter) - 215;
-          x2 = exit ? eventX(exit) : x1 + 85;
         }
+
+        const x2 = x1 + SC_WIDTH[enter.from];
 
         const isVisible = enter.step <= currentStepNum;
 
