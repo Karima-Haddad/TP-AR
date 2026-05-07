@@ -382,9 +382,9 @@ export function getCourseCutPresets(trace: DistributedTrace): CutPreset[] {
   });
 
   return [
-    preset("c1", "C1 coherente", { P1: 3, P2: 2, P3: 3 }, "Frontieres e13, e22 et e33. Les messages m3 et m4 sont en transit."),
+    preset("c1", "C1 coherente", { P1: 3, P2: 5, P3: 2 }, "Frontieres e13, e25 et e32. Les messages m3 et m4 sont en transit."),
     preset("cp", "C' incoherente", { P1: 1, P2: 3, P3: 5 }, "P3 a deja recu m3, mais P1 n'a pas encore inclus son emission e12."),
-    preset("c2", "C2 complete", { P1: 5, P2: 4, P3: 5 }, "Toute l'histoire locale connue est incluse."),
+    preset("c2", "C2 complete", { P1: 5, P2: 6, P3: 4 }, "Toute l'histoire locale connue est incluse."),
   ];
 }
 
