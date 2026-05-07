@@ -1696,6 +1696,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "stretch",
     gap: 12,
     flexShrink: 0,
+    height: 52,
   },
   footerTopRow: {
     display: "flex",
@@ -1752,7 +1753,7 @@ const styles: Record<string, CSSProperties> = {
     cursor: "not-allowed",
   },
   rightPanel: {
-    width: 390,
+    width: 300,
     flexShrink: 0,
     background: "#ffffff",
     borderLeft: "1px solid rgba(0,0,0,0.07)",
@@ -2113,7 +2114,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
   },
   footer: {
-    height: 132,
+    height: "52px",
     flexShrink: 0,
     background: "#ffffff",
     borderTop: "1px solid #d9e1ea",

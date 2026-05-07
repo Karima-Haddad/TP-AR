@@ -154,7 +154,7 @@ body {
 /* RIGHT PANEL */
 
 .rpanel {
-  width: 350px;
+  width: 300px !important;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid var(--border);

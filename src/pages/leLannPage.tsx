@@ -100,7 +100,7 @@ export default function LeLannPage() {
           </div>
 
           <div className="event-log">
-            <div className="log-line">
+            {/* <div className="log-line">
               <span className="log-ts">TYPE</span>
               <span className="log-msg">{currentStep.eventType}</span>
             </div>
@@ -110,7 +110,7 @@ export default function LeLannPage() {
               <span className="log-msg">
                 S{(currentStep.activeSite ?? 0) + 1}
               </span>
-            </div>
+            </div> */}
 
             {currentStep.message && (
               <div className="log-line">
