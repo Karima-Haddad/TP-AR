@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type {
   Cut,
@@ -1431,6 +1431,15 @@ function EventTable({
   activeEventId?: string;
   currentEventIndex: number;
 }) {
+  const activeEventRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    activeEventRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [currentEventIndex]);
+
   return (
     <Panel title="Evenements et horloges" compact>
       <div style={styles.eventTable}>
@@ -1440,6 +1449,7 @@ function EventTable({
           return (
             <div
               key={event.id}
+              ref={isActive ? activeEventRef : null}
               style={{
                 ...styles.eventCell,
                 ...(isReached ? styles.eventCellReached : styles.eventCellPending),
@@ -1453,7 +1463,7 @@ function EventTable({
                 </span>
                 <span style={styles.eventCellMeta}>{formatVector(trace.processes, event.vectorClock)}</span>
               </div>
-              {isReached && (
+              {isActive && (
                 <div style={styles.eventCellDetails}>
                   <div style={styles.eventCellDescription}>{event.description}</div>
                   <div style={styles.eventCellFormula}>{explainEventVector(trace, event)}</div>
