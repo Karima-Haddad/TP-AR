@@ -94,13 +94,20 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
           <div>
             <h1 style={styles.title}>{MODE_LABELS[mode]}</h1>
             <p style={styles.subtitle}>
-              Evenements eij, messages mij, horloges vectorielles et coupures coherentes.
+              événements eij · messages mij · horloges vectorielles · coupures cohérentes
             </p>
           </div>
-          <StatusPill ok={displayedCut.isConsistent} text={displayedCut.isConsistent ? "coherent" : "incoherent"} />
-          <div style={styles.headerMetric}>
-            <span style={styles.metricLabel}>V(C)</span>
-            <span style={styles.metricValue}>{formatVector(trace.processes, displayedCut.vectorDate)}</span>
+
+          <div style={styles.headerBadges}>
+            <StatusPill
+              ok={displayedCut.isConsistent}
+              text={displayedCut.isConsistent ? "cohérent" : "incohérent"}
+            />
+
+            <span style={styles.softBadge}>V(C)</span>
+            <span style={styles.softBadge}>
+              {formatVector(trace.processes, displayedCut.vectorDate)}
+            </span>
           </div>
         </header>
 
@@ -820,13 +827,14 @@ function boundaryOptions(trace: DistributedTrace, processId: ProcessId): Array<{
 
 const styles: Record<string, CSSProperties> = {
   shell: {
-    height: "100vh",
-    minHeight: 680,
+    height: "100%",
+    minHeight: 0,
     display: "flex",
     overflow: "hidden",
     background: "#eef2f6",
     color: "#0f172a",
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
     fontSize: 14,
   },
   sidebar: {
@@ -929,42 +937,49 @@ const styles: Record<string, CSSProperties> = {
     overflow: "hidden",
   },
   header: {
-    height: 78,
-    flexShrink: 0,
-    background: "#ffffff",
-    borderBottom: "1px solid #d9e1ea",
-    padding: "14px 20px",
+    height: 72,
+    padding: "14px 24px",
+    background: "rgba(255, 255, 255, 0.92)",
+    backdropFilter: "blur(14px)",
+    borderBottom: "1px solid #e9ebf2",
     display: "flex",
     alignItems: "center",
     gap: 14,
+    flexShrink: 0,
   },
+
   title: {
     margin: 0,
-    fontSize: 20,
-    lineHeight: 1.1,
-    letterSpacing: 0,
+    fontSize: 17,
+    fontWeight: 700,
+    letterSpacing: -0.35,
+    color: "#0f172a",
   },
+
   subtitle: {
-    margin: "5px 0 0",
-    color: "#64748b",
-    fontSize: 13,
-  },
-  headerMetric: {
-    marginLeft: "auto",
-    display: "grid",
-    gap: 2,
-    justifyItems: "end",
-  },
-  metricLabel: {
-    color: "#64748b",
-    fontSize: 11,
-    fontWeight: 800,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  metricValue: {
+    margin: "3px 0 0",
+    fontSize: 12,
+    color: "#94a3b8",
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-    fontWeight: 800,
+  },
+
+  headerBadges: {
+    marginLeft: "auto",
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+
+  softBadge: {
+    padding: "5px 10px",
+    borderRadius: 8,
+    background: "#f6f7fb",
+    border: "1px solid #e9ebf2",
+    color: "#475569",
+    fontSize: 11,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    fontWeight: 600,
   },
   workspace: {
     flex: 1,

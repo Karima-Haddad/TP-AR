@@ -13,7 +13,10 @@ type IconType =
   | "ring"
   | "fifo"
   | "causal"
-  | "sequencer";
+  | "sequencer"
+  | "cut"
+  | "global"
+  | "snapshot";
   
 
 const groups = {
@@ -101,6 +104,27 @@ const groups = {
         path: "/diffusion/sequencer",
         label: "Séquenceur",
         icon: "sequencer" as const,
+      },
+    ],
+  },
+
+  snapshot: {
+    title: "SNAPSHOTS",
+    algos: [
+      {
+        path: "/snapshot/cut",
+        label: "Coupure cohérente",
+        icon: "cut" as const,
+      },
+      {
+        path: "/snapshot/global",
+        label: "État global",
+        icon: "global" as const,
+      },
+      {
+        path: "/snapshot/chandy",
+        label: "Chandy-Lamport",
+        icon: "snapshot" as const,
       },
     ],
   },
@@ -224,6 +248,32 @@ function renderIcon(type: IconType) {
           <path d="M7 14h10v4H7z" />
         </svg>
       );
+
+    case "cut":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M5 6h14" />
+          <path d="M5 18h14" />
+          <path d="M8 4v16" />
+        </svg>
+      );
+
+    case "global":
+      return (
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M4 12h16" />
+          <path d="M12 4v16" />
+        </svg>
+      );
+
+    case "snapshot":
+      return (
+        <svg viewBox="0 0 24 24">
+          <rect x="5" y="6" width="14" height="12" rx="2" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
   }
 }
 
@@ -246,6 +296,10 @@ export default function Sidebar() {
 
   if (pathname.includes("/election")) {
     group = groups.election;
+  }
+
+  if (pathname.includes("/snapshot")) {
+    group = groups.snapshot;
   }
 
   return (
