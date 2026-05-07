@@ -40,17 +40,21 @@ const ClockPage: FC = () => {
       ? "matrix"
       : "lamport";
 
-  const [algo, setAlgo] = useState<ClockAlgo>(algoFromPath);
-  const [stepIdx, setStepIdx] = useState(0);
+  const algo = algoFromPath;
+
+  const [stepIdx, setStepIdx] = useState(-1);
   const [playing, setPlaying] = useState(false);
-  const [rTab, setRTab]       = useState<RTab>('steps');
+  const [rTab, setRTab] = useState<RTab>('steps');
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevAlgoRef = useRef<ClockAlgo | null>(null);
 
   useEffect(() => {
-    setAlgo(algoFromPath);
-    setStepIdx(0);
-    setPlaying(false);
+    if (prevAlgoRef.current !== null && prevAlgoRef.current !== algoFromPath) {
+      setStepIdx(-1);
+      setPlaying(false);
+    }
+    prevAlgoRef.current = algoFromPath;
   }, [algoFromPath]);
 
   const config     = ALGO_CONFIG[algo];
@@ -77,19 +81,14 @@ const ClockPage: FC = () => {
     }
   }, [stepIdx, totalSteps, playing]);
 
-
-  const handlePlay  = () => { if (stepIdx >= totalSteps - 1) setStepIdx(0); setPlaying(p => !p); };
-  const handlePrev  = () => { setPlaying(false); setStepIdx(p => Math.max(0, p - 1)); };
+  const handlePlay  = () => { if (stepIdx >= totalSteps - 1) setStepIdx(-1); setPlaying(p => !p); };
+  const handlePrev  = () => { setPlaying(false); setStepIdx(p => Math.max(-1, p - 1)); };
   const handleNext  = () => { setPlaying(false); setStepIdx(p => Math.min(totalSteps - 1, p + 1)); };
-  const handleReset = () => { setPlaying(false); setStepIdx(0); };
+  const handleReset = () => { setPlaying(false); setStepIdx(-1); };
 
   return (
     <>
-      
-
       <div className="layout">
-        
-
         <div className="main">
           <div className="algo-header">
             <div>
