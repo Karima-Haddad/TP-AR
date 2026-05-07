@@ -35,7 +35,7 @@ export default function Header() {
       </NavLink>
 
       {/* SNAPSHOTS */}
-      <NavLink to="/snapshot" className="nav-tab">
+      <NavLink to="/snapshot/cut" className="nav-tab">
         <span className="tab-dot"></span>
         Snapshots
       </NavLink>

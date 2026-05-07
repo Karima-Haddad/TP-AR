@@ -85,8 +85,6 @@ export default function LamportPage() {
               </div>
             </div>
 
-            {/* <span className="algo-pill pill-amber">Mutex</span> */}
-
             <div className="header-spacer" />
 
             <div className="header-meta">

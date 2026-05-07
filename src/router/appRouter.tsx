@@ -15,6 +15,10 @@ import RicartTokenPage from "../pages/RicartTokenPage";
 import ElectionPage from "../pages/ElectionPage";
 import ClockPage from "../pages/ClockPage";
 
+import CutPage from "../pages/CutPage";
+import GlobalStatePage from "../pages/GlobalStatePage";
+import ChandyPage from "../pages/ChandyPage";
+
 function RootLayout() {
   return (
     <div className="app">
@@ -79,6 +83,19 @@ export const router = createBrowserRouter([
       {
         path: "election/:algo",
         element: <ElectionPage />,
+      },
+
+      {
+        path: "snapshot/cut",
+        element: <CutPage />,
+      },
+      {
+        path: "snapshot/global",
+        element: <GlobalStatePage />,
+      },
+      {
+        path: "snapshot/chandy",
+        element: <ChandyPage />,
       },
     ],
   },

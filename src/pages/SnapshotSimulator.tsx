@@ -276,13 +276,20 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
           <div>
             <h1 style={styles.title}>{MODE_LABELS[mode]}</h1>
             <p style={styles.subtitle}>
-              Evenements eij, messages mij, horloges vectorielles et coupures coherentes.
+              événements eij · messages mij · horloges vectorielles · coupures cohérentes
             </p>
           </div>
-          <StatusPill ok={displayedCut.isConsistent} text={displayedCut.isConsistent ? "coherent" : "incoherent"} />
-          <div style={styles.headerMetric}>
-            <span style={styles.metricLabel}>V(C)</span>
-            <span style={styles.metricValue}>{formatVector(trace.processes, displayedCut.vectorDate)}</span>
+
+          <div style={styles.headerBadges}>
+            <StatusPill
+              ok={displayedCut.isConsistent}
+              text={displayedCut.isConsistent ? "cohérent" : "incohérent"}
+            />
+
+            <span style={styles.softBadge}>V(C)</span>
+            <span style={styles.softBadge}>
+              {formatVector(trace.processes, displayedCut.vectorDate)}
+            </span>
           </div>
         </header>
 
@@ -1489,8 +1496,8 @@ function boundaryOptions(trace: DistributedTrace, processId: ProcessId): Array<{
 
 const styles: Record<string, CSSProperties> = {
   shell: {
-    height: "100vh",
-    minHeight: 680,
+    height: "100%",
+    minHeight: 0,
     display: "flex",
     overflow: "hidden",
     background: "#f0f2f7",
@@ -1607,7 +1614,9 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 14,
+    flexShrink: 0,
   },
+
   title: {
     margin: 0,
     fontSize: 17,
@@ -1615,17 +1624,20 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: -0.35,
     color: "#0f172a",
   },
+
   subtitle: {
     margin: "3px 0 0",
     fontSize: 12,
     color: "#94a3b8",
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   },
-  headerMetric: {
+
+  headerBadges: {
     marginLeft: "auto",
-    display: "grid",
-    gap: 2,
-    justifyItems: "end",
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    alignItems: "center",
   },
 
   softBadge: {
