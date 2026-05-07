@@ -8,6 +8,7 @@ import type { ClockAlgo, LamportStep, VectorStep, MatrixStep } from '../types/cl
 import SimCanvas from '../components/SimCanvas';
 import StepPanel from '../components/StepPanel';
 import ControlBar from '../components/ControlBar';
+import { useLocation } from "react-router-dom";
 
 type AnyStep = LamportStep | VectorStep | MatrixStep;
 type RTab = 'steps' | 'clocks' | 'props';
@@ -27,16 +28,30 @@ const ALGO_CONFIG: Record<ClockAlgo, AlgoConfig> = {
   matrix:  { id: 'matrix',  label: 'Horloges matricielles', icon: '⊞', steps: MATRIX_STEPS,  rules: MATRIX_RULES,  props: MATRIX_PROPS  },
 };
 
-const ALGOS: ClockAlgo[] = ['lamport', 'vector', 'matrix'];
 const PLAY_DELAY_MS = 750;
 
 const ClockPage: FC = () => {
-  const [algo, setAlgo]       = useState<ClockAlgo>('lamport');
+  const { pathname } = useLocation();
+
+  const algoFromPath: ClockAlgo =
+    pathname.includes("/clocks/vector")
+      ? "vector"
+      : pathname.includes("/clocks/matrix")
+      ? "matrix"
+      : "lamport";
+
+  const [algo, setAlgo] = useState<ClockAlgo>(algoFromPath);
   const [stepIdx, setStepIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [rTab, setRTab]       = useState<RTab>('steps');
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setAlgo(algoFromPath);
+    setStepIdx(0);
+    setPlaying(false);
+  }, [algoFromPath]);
 
   const config     = ALGO_CONFIG[algo];
   const totalSteps = config.steps.length;
@@ -62,9 +77,6 @@ const ClockPage: FC = () => {
     }
   }, [stepIdx, totalSteps, playing]);
 
-  const handleSelectAlgo = (a: ClockAlgo) => {
-    setAlgo(a); setStepIdx(0); setPlaying(false);
-  };
 
   const handlePlay  = () => { if (stepIdx >= totalSteps - 1) setStepIdx(0); setPlaying(p => !p); };
   const handlePrev  = () => { setPlaying(false); setStepIdx(p => Math.max(0, p - 1)); };
