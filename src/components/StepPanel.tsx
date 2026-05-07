@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import type { ClockAlgo, LamportStep, VectorStep, MatrixStep } from '../types/clock.types';
-import { fmtVector } from '../algorithms/clock/vectorClock';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,19 +39,24 @@ function StepsTab({ steps, currentStep }: { steps: AnyStep[]; currentStep: numbe
 
   return (
     <>
-      {steps.map((st, i) => {
-        const cls = i < currentStep ? 'past' : i === currentStep ? 'current' : 'future';
-        const info = tagInfo[st.tag] ?? tagInfo.local;
-        return (
-          <div key={i} className={`step-item ${cls}`} ref={i === currentStep ? activeRef : null}>
-            <div className="step-num">ÉTAPE {i + 1}</div>
-            <div className="step-text">{st.t}</div>
-            <div className="step-badges">
-              <span className={`sbadge ${info.cls}`}>{info.label}</span>
+      {steps
+        .filter((_, i) => i <= currentStep)
+        .map((st) => {
+          const i = steps.indexOf(st);
+          const isLast = i === currentStep;
+          const cls = isLast ? 'current' : 'past';
+          return (
+            <div key={i} className={`step-item ${cls}`} ref={isLast ? activeRef : null}>
+              <div className="step-num">ÉTAPE {i + 1}</div>
+              <div className="step-text">{st.t}</div>
+              <div className="step-badges">
+                <span className={`sbadge ${(tagInfo[st.tag] ?? tagInfo.local).cls}`}>
+                  {(tagInfo[st.tag] ?? tagInfo.local).label}
+                </span>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
     </>
   );
 }
@@ -93,7 +97,7 @@ function MatrixGrid({ mat, procIdx }: { mat: number[][]; procIdx: number }) {
               }}>{PROC_LABELS[r]}</td>
               {row.map((val, c) => {
                 const isDiag = r === c;
-                const isRow0 = r === procIdx; // ligne du processus observateur
+                const isRow0 = r === procIdx;
                 return (
                   <td key={c} style={{
                     padding: '3px 4px',
@@ -132,6 +136,113 @@ function ClocksTab({
   currentStep: number;
   rules: readonly string[];
 }) {
+  if (currentStep < 0) {
+    const zeroMatrix = Array.from({ length: 5 }, () => [0, 0, 0, 0, 0]);
+
+    return (
+      <>
+        <div className="clock-section">
+          <div className="clock-section-title">Valeurs courantes</div>
+
+          {/* ── Lamport ── */}
+          {algo === 'lamport' && (
+            <div className="clock-cards">
+              {PROC_LABELS.map((label, i) => (
+                <div
+                  key={i}
+                  className="clock-card"
+                  style={{
+                    border: `1px solid ${COLORS[i]}30`,
+                    background: 'var(--surface2)',
+                  }}
+                >
+                  <div
+                    className="clock-card-label"
+                    style={{ color: COLORS[i] }}
+                  >
+                    {label}
+                  </div>
+
+                  <div
+                    className="clock-card-val"
+                    style={{
+                      fontSize: '20px',
+                      color: COLORS[i],
+                    }}
+                  >
+                    0
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Vector : une ligne par processus ── */}
+          {algo === 'vector' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {PROC_LABELS.map((label, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'var(--surface2)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  border: `1px solid ${COLORS[i]}30`,
+                }}>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    color: COLORS[i],
+                    minWidth: '24px',
+                  }}>{label}</span>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: '15px',
+                    color: 'var(--text2)',
+                  }}>[0, 0, 0, 0, 0]</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Matrix ── */}
+          {algo === 'matrix' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {PROC_LABELS.map((label, i) => (
+                <div key={i} style={{
+                  background: 'var(--surface2)',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  border: `1px solid ${COLORS[i]}30`,
+                }}>
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: COLORS[i],
+                    marginBottom: '4px',
+                    fontFamily: "'DM Mono', monospace",
+                  }}>
+                    HM[{label}]
+                  </div>
+                  <MatrixGrid mat={zeroMatrix} procIdx={i} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="clock-section">
+          <div className="clock-section-title">Règles de mise à jour</div>
+          <div className="clock-rule" style={{ whiteSpace: 'pre-line', fontSize: '13px', lineHeight: 1.7 }}>
+            {rules.join('\n')}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const s = steps[Math.min(currentStep, steps.length - 1)];
 
   return (
@@ -139,23 +250,79 @@ function ClocksTab({
       <div className="clock-section">
         <div className="clock-section-title">Valeurs courantes</div>
 
-        {/* ── Lamport & Vector : cards compactes ── */}
-        {algo !== 'matrix' && (
+        {/* ── Lamport : cards compactes ── */}
+        {algo === 'lamport' && (
           <div className="clock-cards">
+            {PROC_LABELS.map((label, i) => (
+              <div
+                key={i}
+                className="clock-card"
+                style={{
+                  border: `1px solid ${COLORS[i]}30`,
+                  background: 'var(--surface2)',
+                }}
+              >
+                <div
+                  className="clock-card-label"
+                  style={{ color: COLORS[i] }}
+                >
+                  {label}
+                </div>
+
+                <div
+                  className="clock-card-val"
+                  style={{
+                    fontSize: '20px',
+                    color: COLORS[i],
+                  }}
+                >
+                  {String((s as LamportStep).clocks[i])}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Vector : une ligne par processus avec valeur propre mise en évidence ── */}
+        {algo === 'vector' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {PROC_LABELS.map((label, i) => {
-              const val = algo === 'lamport'
-                ? String((s as LamportStep).clocks[i])
-                : fmtVector((s as VectorStep).clocks[i]);
+              const vec = (s as VectorStep).clocks[i];
               return (
-                <div key={i} className="clock-card">
-                  <div className="clock-card-label">{label}</div>
-                  <div className="clock-card-val" style={{
-                    fontSize: algo === 'lamport' ? '20px' : '9px',
-                    wordBreak: 'break-all',
-                    lineHeight: 1.3,
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'var(--surface2)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  border: `1px solid ${COLORS[i]}30`,
+                }}>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    color: COLORS[i],
+                    minWidth: '24px',
+                  }}>{label}</span>
+                  <span style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: '15px',
+                    color: 'var(--text1)',
+                    letterSpacing: '0.03em',
                   }}>
-                    {val}
-                  </div>
+                    [
+                    {vec.map((v, j) => (
+                      <span key={j}>
+                        <span style={{
+                          color: j === i ? COLORS[i] : 'var(--text2)',
+                          fontWeight: j === i ? 700 : 400,
+                        }}>{v}</span>
+                        {j < vec.length - 1 && <span style={{ color: 'var(--text3)' }}>, </span>}
+                      </span>
+                    ))}
+                    ]
+                  </span>
                 </div>
               );
             })}
@@ -193,7 +360,7 @@ function ClocksTab({
 
       <div className="clock-section">
         <div className="clock-section-title">Règles de mise à jour</div>
-        <div className="clock-rule" style={{ whiteSpace: 'pre-line', fontSize: '11px' }}>
+        <div className="clock-rule" style={{ whiteSpace: 'pre-line', fontSize: '13px', lineHeight: 1.7 }}>
           {rules.join('\n')}
         </div>
       </div>
@@ -209,8 +376,8 @@ function PropsTab({
   return (
     <>
       <div style={{
-        marginBottom: '8px',
-        fontSize: '11px',
+        marginBottom: '10px',
+        fontSize: '13px',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '.06em',
@@ -219,10 +386,29 @@ function PropsTab({
         Vérification
       </div>
       {props.map((p, i) => (
-        <div key={i} className="prop-row">
-          <div className={`prop-indicator pi-${p.status}`} />
-          <span className="prop-name">{p.name}</span>
-          <span className="prop-val">{p.detail}</span>
+        <div key={i} className="prop-row" style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px 0',
+          gap: '10px',
+        }}>
+          <div className={`prop-indicator pi-${p.status}`} style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            flexShrink: 0,
+          }} />
+          <span className="prop-name" style={{
+            fontSize: '15px',
+            fontWeight: 600,
+            flex: 1,
+          }}>{p.name}</span>
+          <span className="prop-val" style={{
+            fontSize: '11px',
+            color: 'var(--text3)',
+            textAlign: 'right',
+            flexShrink: 0,
+          }}>{p.detail}</span>
         </div>
       ))}
     </>
