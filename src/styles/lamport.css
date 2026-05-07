@@ -170,6 +170,7 @@ body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: white !important;
+  border-bottom: 2px solid var(--accent) !important;
 }
 
 .rtab {
@@ -185,8 +186,10 @@ body {
 
 .rtab.active,
 .rtab:hover {
+   font-size: 15px;
   color: var(--text);
   background: white;
+  border-bottom: none ;
 
 }
 
