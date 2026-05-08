@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/mutex/lamport" replace />,
+        element: <Navigate to="/clocks/lamport" replace />,
       },
 
       {
