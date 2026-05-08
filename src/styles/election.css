@@ -37,7 +37,7 @@
 }
 
 .rpanel {
-  width: 390px;
+  width: 300px !important;
   flex-shrink: 0;
   min-height: 0;
   display: flex;
@@ -53,6 +53,7 @@
 
 .bottom-bar {
   flex-shrink: 0;
+  height: 52px !important;
 }
 
 /* PANEL ÉTAPES - STYLE LAMPORT */

@@ -500,27 +500,42 @@ export function generateRicartAgrawalaSteps(): RicartStep[] {
   pushStep("État initial", "Tous les processus sont au repos.");
 
   const scenario: Action[] = [
-    { kind: "REQUEST_CS", site: 1 },
-    { kind: "REQUEST_CS", site: 2 },
+  // P1 et P2 demandent la SC
+  { kind: "REQUEST_CS", site: 1 },
+  { kind: "REQUEST_CS", site: 2 },
 
-    { kind: "DELIVER_REQUEST", from: 1, to: 2 },
-    { kind: "DELIVER_REQUEST", from: 1, to: 3 },
+  // REQUEST de P1
+  { kind: "DELIVER_REQUEST", from: 1, to: 2 },
+  { kind: "DELIVER_REQUEST", from: 1, to: 3 },
 
-    { kind: "DELIVER_REQUEST", from: 2, to: 1 },
-    { kind: "DELIVER_REQUEST", from: 2, to: 3 },
+  // REQUEST de P2
+  { kind: "DELIVER_REQUEST", from: 2, to: 1 },
+  { kind: "DELIVER_REQUEST", from: 2, to: 3 },
 
-    { kind: "DELIVER_REPLY", from: 2, to: 1 },
-    { kind: "DELIVER_REPLY", from: 3, to: 1 },
+  // P2 répond à P1
+  { kind: "DELIVER_REPLY", from: 2, to: 1 },
 
-    { kind: "TRY_ENTER_CS", site: 1 },
-    { kind: "EXIT_CS", site: 1 },
+  // P3 répond à P1
+  { kind: "DELIVER_REPLY", from: 3, to: 1 },
 
-    { kind: "DELIVER_REPLY", from: 3, to: 2 },
-    { kind: "DELIVER_REPLY", from: 1, to: 2 },
+  // P3 répond aussi à P2
+  { kind: "DELIVER_REPLY", from: 3, to: 2 },
 
-    { kind: "TRY_ENTER_CS", site: 2 },
-    { kind: "EXIT_CS", site: 2 },
-  ];
+  // Maintenant P1 entre en SC
+  { kind: "TRY_ENTER_CS", site: 1 },
+
+  // P1 sort de SC
+  { kind: "EXIT_CS", site: 1 },
+
+  // P1 envoie le REPLY différé à P2
+  { kind: "DELIVER_REPLY", from: 1, to: 2 },
+
+  // P2 peut maintenant entrer
+  { kind: "TRY_ENTER_CS", site: 2 },
+
+  // P2 sort de SC
+  { kind: "EXIT_CS", site: 2 },
+];
 
   scenario.forEach(apply);
 

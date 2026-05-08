@@ -1,18 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type {
   Cut,
   CutBoundary,
+  DistributedEvent,
   DistributedTrace,
   GlobalState,
   ProcessId,
   SnapshotRun,
+  VectorClock,
 } from "../types/snapshot.types";
 import {
+  createVector,
   createCourseTrace,
   eventAtBoundary,
   evaluateCut,
   formatVector,
+  maxVector,
 } from "../algorithms/snapshots/cut";
 import { buildGlobalStateFromCut } from "../algorithms/snapshots/globalState";
 import { COLORS, runChandyLamport } from  "../algorithms/snapshots/chandyLamport";
@@ -35,15 +39,86 @@ const KIND_COLORS: Record<string, string> = {
   receive: "#059669",
 };
 
-const DEFAULT_BOUNDARY: CutBoundary = { P1: 3, P2: 2, P3: 3 };
+const COHERENT_CUT_BOUNDARY: CutBoundary = { P1: 3, P2: 5, P3: 2 };
+const DEFAULT_BOUNDARY: CutBoundary = COHERENT_CUT_BOUNDARY;
+const SHARED_CUT_BOUNDARY_KEY = "snapshot.sharedCutBoundary";
+const CUT_CONSISTENCY_STEP_COUNT = 3;
 
 export type Mode = "cut" | "global" | "chandy";
 
+type SnapshotPanelTab =
+  | "frontiers"
+  | "analysis"
+  | "cut-main"
+  | "cut-steps"
+  | "global-state"
+  | "events"
+  | "rules"
+  | "chandy-step"
+  | "chandy-states"
+  | "chandy-channels";
+
+const PANEL_TABS: Record<Mode, Array<{ id: SnapshotPanelTab; label: string }>> = {
+  cut: [
+    { id: "cut-main", label: "Coupure" },
+    { id: "cut-steps", label: "Etapes" },
+  ],
+  global: [
+    { id: "global-state", label: "Etat" },
+    { id: "events", label: "Evenements" },
+    { id: "rules", label: "Regles" },
+  ],
+  chandy: [
+    { id: "chandy-step", label: "Etape" },
+    { id: "chandy-states", label: "Etats" },
+    { id: "chandy-channels", label: "Canaux" },
+  ],
+};
+
+const DEFAULT_PANEL_TAB: Record<Mode, SnapshotPanelTab> = {
+  cut: "cut-main",
+  global: "global-state",
+  chandy: "chandy-step",
+};
+
+function readSharedCutBoundary(): CutBoundary {
+  if (typeof window === "undefined") return DEFAULT_BOUNDARY;
+
+  try {
+    const rawBoundary = window.localStorage.getItem(SHARED_CUT_BOUNDARY_KEY);
+    if (!rawBoundary) return DEFAULT_BOUNDARY;
+    const parsed = JSON.parse(rawBoundary) as Partial<CutBoundary>;
+    return Object.fromEntries(
+      Object.entries(DEFAULT_BOUNDARY).map(([processId, defaultValue]) => {
+        const value = parsed[processId];
+        return [processId, typeof value === "number" ? value : defaultValue];
+      })
+    ) as CutBoundary;
+  } catch {
+    return DEFAULT_BOUNDARY;
+  }
+}
+
+function writeSharedCutBoundary(boundary: CutBoundary) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(SHARED_CUT_BOUNDARY_KEY, JSON.stringify(boundary));
+  } catch {
+    // Storage can be unavailable in private/locked contexts; the local state still works.
+  }
+}
+
 export default function SnapshotSimulator({ mode }: { mode: Mode }) {
   const trace = useMemo(() => createCourseTrace(), []);
-  const [cutBoundary, setCutBoundary] = useState<CutBoundary>(DEFAULT_BOUNDARY);
+  const [cutBoundary, setCutBoundary] = useState<CutBoundary>(() => readSharedCutBoundary());
+  const [cutCheckStepIndex, setCutCheckStepIndex] = useState(0);
+  const [cutCheckPlaying, setCutCheckPlaying] = useState(false);
   const [chandyStepIndex, setChandyStepIndex] = useState(0);
   const [chandyPlaying, setChandyPlaying] = useState(false);
+  const [globalEventStepIndex, setGlobalEventStepIndex] = useState(0);
+  const [globalEventsPlaying, setGlobalEventsPlaying] = useState(false);
+  const [activePanelTab, setActivePanelTab] = useState<SnapshotPanelTab>(DEFAULT_PANEL_TAB[mode]);
 
   const chandyInitiator: ProcessId = "P1";
   const chandyStartBoundary = 2;
@@ -58,6 +133,8 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
     [trace]
   );
   const activeChandyStep = snapshotRun.steps[Math.min(chandyStepIndex, snapshotRun.steps.length - 1)];
+  const activeGlobalEventIndex = Math.min(globalEventStepIndex, Math.max(0, trace.events.length - 1));
+  const activeGlobalEvent = trace.events[activeGlobalEventIndex];
   const chandyCut = useMemo(
     () => evaluateCut(trace, activeChandyStep?.recordedBoundary ?? snapshotRun.recordBoundary, "chandy-step"),
     [trace, activeChandyStep, snapshotRun.recordBoundary]
@@ -65,9 +142,18 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
   const displayedCut = mode === "chandy" ? chandyCut : cut;
 
   useEffect(() => {
-    setChandyStepIndex(0);
-    setChandyPlaying(false);
-  }, [snapshotRun]);
+    if (!cutCheckPlaying || mode !== "cut") return;
+    const timer = window.setInterval(() => {
+      setCutCheckStepIndex((index) => {
+        if (index >= CUT_CONSISTENCY_STEP_COUNT - 1) {
+          setCutCheckPlaying(false);
+          return index;
+        }
+        return index + 1;
+      });
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [cutCheckPlaying, mode]);
 
   useEffect(() => {
     if (!chandyPlaying) return;
@@ -83,9 +169,105 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
     return () => window.clearInterval(timer);
   }, [chandyPlaying, snapshotRun.steps.length]);
 
+  useEffect(() => {
+    if (!globalEventsPlaying || mode !== "global") return;
+    const timer = window.setInterval(() => {
+      setGlobalEventStepIndex((index) => {
+        if (index >= trace.events.length - 1) {
+          setGlobalEventsPlaying(false);
+          return index;
+        }
+        return index + 1;
+      });
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [globalEventsPlaying, mode, trace.events.length]);
+
   function updateBoundary(processId: ProcessId, value: number) {
-    setCutBoundary((current) => ({ ...current, [processId]: value }));
+    setCutCheckPlaying(false);
+    setCutCheckStepIndex(0);
+    setCutBoundary((current) => {
+      const next = { ...current, [processId]: value };
+      writeSharedCutBoundary(next);
+      return next;
+    });
   }
+
+  function playCutCheck() {
+    if (cutCheckStepIndex >= CUT_CONSISTENCY_STEP_COUNT - 1) {
+      setCutCheckStepIndex(0);
+      setCutCheckPlaying(true);
+      return;
+    }
+    setCutCheckPlaying((playing) => !playing);
+  }
+
+  function previousCutCheckStep() {
+    setCutCheckPlaying(false);
+    setCutCheckStepIndex((index) => Math.max(0, index - 1));
+  }
+
+  function nextCutCheckStep() {
+    setCutCheckPlaying(false);
+    setCutCheckStepIndex((index) => Math.min(CUT_CONSISTENCY_STEP_COUNT - 1, index + 1));
+  }
+
+  function resetCutCheck() {
+    setCutCheckPlaying(false);
+    setCutCheckStepIndex(0);
+  }
+
+  function playChandy() {
+    if (chandyStepIndex >= snapshotRun.steps.length - 1) {
+      setChandyStepIndex(0);
+      setChandyPlaying(true);
+      return;
+    }
+    setChandyPlaying((playing) => !playing);
+  }
+
+  function previousChandyStep() {
+    setChandyPlaying(false);
+    setChandyStepIndex((index) => Math.max(0, index - 1));
+  }
+
+  function nextChandyStep() {
+    setChandyPlaying(false);
+    setChandyStepIndex((index) => Math.min(snapshotRun.steps.length - 1, index + 1));
+  }
+
+  function resetChandy() {
+    setChandyPlaying(false);
+    setChandyStepIndex(0);
+  }
+
+  function playGlobalEvents() {
+    if (globalEventStepIndex >= trace.events.length - 1) {
+      setGlobalEventStepIndex(0);
+      setGlobalEventsPlaying(true);
+      return;
+    }
+    setGlobalEventsPlaying((playing) => !playing);
+  }
+
+  function previousGlobalEvent() {
+    setGlobalEventsPlaying(false);
+    setGlobalEventStepIndex((index) => Math.max(0, index - 1));
+  }
+
+  function nextGlobalEvent() {
+    setGlobalEventsPlaying(false);
+    setGlobalEventStepIndex((index) => Math.min(trace.events.length - 1, index + 1));
+  }
+
+  function resetGlobalEvents() {
+    setGlobalEventsPlaying(false);
+    setGlobalEventStepIndex(0);
+  }
+
+  const visiblePanelTab = PANEL_TABS[mode].some((tab) => tab.id === activePanelTab)
+    ? activePanelTab
+    : DEFAULT_PANEL_TAB[mode];
 
   return (
     <div style={styles.shell}>
@@ -119,38 +301,262 @@ export default function SnapshotSimulator({ mode }: { mode: Mode }) {
               mode={mode}
               snapshotRun={mode === "chandy" ? snapshotRun : undefined}
               chandyStepIndex={mode === "chandy" ? chandyStepIndex : undefined}
+              activeEventId={mode === "global" ? activeGlobalEvent?.id : undefined}
             />
           </div>
 
           <aside style={styles.rightPanel}>
-            {mode === "cut" && (
-              <Panel title="Frontieres C">
-                <BoundaryControls trace={trace} boundary={cutBoundary} onChange={updateBoundary} />
-              </Panel>
-            )}
-            {mode === "cut" && <CutAnalysis trace={trace} cut={cut} />}
-            {mode === "global" && (
-              <>
-                <GlobalAnalysis trace={trace} globalState={globalState} />
-                <EventTable trace={trace} />
-                <TheoryPanel />
-              </>
-            )}
-            {mode === "chandy" && (
-              <ChandyAnalysis
-                trace={trace}
-                run={snapshotRun}
-                stepIndex={chandyStepIndex}
-                playing={chandyPlaying}
-                onStepChange={setChandyStepIndex}
-                onPlayingChange={setChandyPlaying}
+            {(mode === "cut" || mode === "global") && (
+              <RightPanelTabs
+                tabs={PANEL_TABS[mode]}
+                activeTab={visiblePanelTab}
+                onTabChange={setActivePanelTab}
               />
             )}
+
+            <div style={styles.rightPanelBody}>
+              {mode === "cut" && (
+                <>
+                  {visiblePanelTab === "cut-main" && (
+                    <>
+                      <Panel title="Frontieres C">
+                        <BoundaryControls trace={trace} boundary={cutBoundary} onChange={updateBoundary} />
+                      </Panel>
+                      <CutAnalysis trace={trace} cut={cut} />
+                    </>
+                  )}
+                  {visiblePanelTab === "cut-steps" && (
+                    <Panel title="Etapes de validation">
+                      <CutConsistencySteps trace={trace} cut={cut} stepIndex={cutCheckStepIndex} />
+                    </Panel>
+                  )}
+                </>
+              )}
+              {mode === "global" && visiblePanelTab === "global-state" && (
+                <GlobalAnalysis trace={trace} globalState={globalState} />
+              )}
+              {mode === "global" && visiblePanelTab === "events" && (
+                <EventTable
+                  trace={trace}
+                  activeEventId={activeGlobalEvent?.id}
+                  currentEventIndex={activeGlobalEventIndex}
+                />
+              )}
+              {mode === "global" && visiblePanelTab === "rules" && <TheoryPanel />}
+              {mode === "chandy" && (
+                <ChandyAnalysis
+                  trace={trace}
+                  run={snapshotRun}
+                  stepIndex={chandyStepIndex}
+                />
+              )}
+            </div>
           </aside>
         </section>
+
+        <SnapshotFooter
+          mode={mode}
+          currentStep={mode === "cut" ? cutCheckStepIndex : mode === "global" ? activeGlobalEventIndex : chandyStepIndex}
+          totalSteps={mode === "cut" ? CUT_CONSISTENCY_STEP_COUNT : mode === "global" ? trace.events.length : snapshotRun.steps.length}
+          playing={mode === "cut" ? cutCheckPlaying : mode === "global" ? globalEventsPlaying : chandyPlaying}
+          onPlay={mode === "cut" ? playCutCheck : mode === "global" ? playGlobalEvents : playChandy}
+          onPrev={mode === "cut" ? previousCutCheckStep : mode === "global" ? previousGlobalEvent : previousChandyStep}
+          onNext={mode === "cut" ? nextCutCheckStep : mode === "global" ? nextGlobalEvent : nextChandyStep}
+          onReset={mode === "cut" ? resetCutCheck : mode === "global" ? resetGlobalEvents : resetChandy}
+        />
       </main>
     </div>
   );
+}
+
+function RightPanelTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+}: {
+  tabs: Array<{ id: SnapshotPanelTab; label: string }>;
+  activeTab: SnapshotPanelTab;
+  onTabChange: (tab: SnapshotPanelTab) => void;
+}) {
+  return (
+    <div style={styles.rightPanelTabs}>
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          style={{
+            ...styles.rightPanelTab,
+            ...(activeTab === tab.id ? styles.rightPanelTabActive : {}),
+          }}
+          onClick={() => onTabChange(tab.id)}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function IconReset() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M2 8a6 6 0 1 0 1.4-3.9" />
+      <path d="M2 2v4h4" />
+    </svg>
+  );
+}
+
+function IconPrev() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M10 4L5 8l5 4" />
+      <rect x="4" y="4" width="1.5" height="8" rx="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconNext() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M6 4l5 4-5 4" />
+      <rect x="10.5" y="4" width="1.5" height="8" rx="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconPlay() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M5 3.5l8 4.5-8 4.5z" />
+    </svg>
+  );
+}
+
+function IconPause() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="4" y="3" width="3" height="10" rx="1" />
+      <rect x="9" y="3" width="3" height="10" rx="1" />
+    </svg>
+  );
+}
+
+function SnapshotFooter({
+  mode,
+  currentStep,
+  totalSteps,
+  playing,
+  onPlay,
+  onPrev,
+  onNext,
+  onReset,
+}: {
+  mode: Mode;
+  currentStep: number;
+  totalSteps: number;
+  playing: boolean;
+  onPlay: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onReset: () => void;
+}) {
+  const isChandy = mode === "chandy";
+  const isGlobal = mode === "global";
+  const isCut = mode === "cut";
+  const hasTimelineControls = isCut || isChandy || isGlobal;
+  const safeTotalSteps = Math.max(1, totalSteps);
+  const safeCurrentStep = Math.min(Math.max(0, currentStep), safeTotalSteps - 1);
+  const progress = hasTimelineControls ? ((safeCurrentStep + 1) / safeTotalSteps) * 100 : 100;
+  const stepLabel = hasTimelineControls
+    ? `Etape ${safeCurrentStep + 1} / ${safeTotalSteps}`
+    : "Coupure manuelle";
+  const previousDisabled = !hasTimelineControls || safeCurrentStep <= 0;
+  const nextDisabled = !hasTimelineControls || safeCurrentStep >= safeTotalSteps - 1;
+
+  return (
+    <footer style={styles.bottomBar}>
+      <div style={styles.footerTopRow}>
+        <div style={styles.stepInfo}>{stepLabel}</div>
+
+        <div style={styles.progressTrack}>
+          <div style={{ ...styles.progressFill, width: `${progress}%` }} />
+        </div>
+
+        {hasTimelineControls && (
+          <div style={styles.controls}>
+            <button type="button" style={{ ...styles.footerButton, ...styles.footerPrimaryButton }} onClick={onPlay} title="Play/Pause">
+              {playing ? <IconPause /> : <IconPlay />}
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.footerButton, ...(previousDisabled ? styles.footerButtonDisabled : {}) }}
+              onClick={onPrev}
+              disabled={previousDisabled}
+              title="Precedent"
+            >
+              <IconPrev />
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.footerButton, ...(nextDisabled ? styles.footerButtonDisabled : {}) }}
+              onClick={onNext}
+              disabled={nextDisabled}
+              title="Suivant"
+            >
+              <IconNext />
+            </button>
+            <button type="button" style={styles.footerButton} onClick={onReset} title="Reinitialiser">
+              <IconReset />
+            </button>
+          </div>
+        )}
+      </div>
+    </footer>
+  );
+}
+
+function vectorBeforeEvent(trace: DistributedTrace, event: DistributedEvent): VectorClock {
+  const previousEvent = trace.eventsByProcess[event.processId]?.find(
+    (candidate) => candidate.processIndex === event.processIndex - 1
+  );
+  return previousEvent?.vectorClock ?? createVector(trace.processes);
+}
+
+function messageForEvent(trace: DistributedTrace, event: DistributedEvent) {
+  if (!event.messageId) return undefined;
+  if (event.kind === "send") {
+    return trace.messages.find((message) => message.sendEventId === event.id);
+  }
+  if (event.kind === "receive") {
+    return trace.messages.find((message) => message.receiveEventId === event.id);
+  }
+  return undefined;
+}
+
+function explainEventVector(trace: DistributedTrace, event: DistributedEvent): string {
+  const before = vectorBeforeEvent(trace, event);
+  const beforeText = formatVector(trace.processes, before);
+  const afterText = formatVector(trace.processes, event.vectorClock);
+  const localComponent = event.processId;
+
+  if (event.kind === "internal") {
+    return `${event.processId}: V avant = ${beforeText}. Evenement local: on pose V[${localComponent}] = ${event.processIndex}. Resultat: V(${event.label}) = ${afterText}.`;
+  }
+
+  if (event.kind === "send") {
+    const message = messageForEvent(trace, event);
+    const messageLabel = message?.label ?? event.messageId ?? "message";
+    return `${event.processId}: V avant = ${beforeText}. Une emission est un evenement local: V[${localComponent}] = ${event.processIndex}. Le message ${messageLabel} transporte ensuite ${afterText}.`;
+  }
+
+  const message = messageForEvent(trace, event);
+  const receivedVector = message?.sendVector;
+  if (!receivedVector) {
+    return `${event.processId}: V avant = ${beforeText}. Reception: on fusionne avec le vecteur du message, puis on pose V[${localComponent}] = ${event.processIndex}. Resultat: ${afterText}.`;
+  }
+
+  const merged = maxVector(trace.processes, before, receivedVector);
+  return `${event.processId}: V avant = ${beforeText}. Le message ${message.label} apporte ${formatVector(trace.processes, receivedVector)}. Max composante par composante = ${formatVector(trace.processes, merged)}, puis V[${localComponent}] = ${event.processIndex}. Resultat: V(${event.label}) = ${afterText}.`;
 }
 
 function BoundaryControls({
@@ -184,28 +590,27 @@ function BoundaryControls({
   );
 }
 
-// Message colors palette — each message gets a distinct color like in course diagrams
-const MESSAGE_COLORS = ["#2563eb", "#7c3aed", "#059669", "#d97706", "#dc2626", "#0891b2", "#be185d", "#65a30d"];
-
 function TraceDiagram({
   trace,
   cut,
   mode,
   snapshotRun,
   chandyStepIndex,
+  activeEventId,
 }: {
   trace: DistributedTrace;
   cut: Cut;
   mode: Mode;
   snapshotRun?: SnapshotRun;
   chandyStepIndex?: number;
+  activeEventId?: string;
 }) {
-  const width = 980;
-  const height = 340;
-  const left = 80;
-  const right = 930;
-  const top = 60;
-  const rowGap = 100;
+  const width = 760;
+  const height = 360;
+  const left = 54;
+  const right = 704;
+  const top = 68;
+  const rowGap = 108;
   const maxPosition = 14;
 
   const rowY = (processId: ProcessId) => top + trace.processes.indexOf(processId) * rowGap;
@@ -221,11 +626,13 @@ function TraceDiagram({
     const event = eventAtBoundary(trace, processId, boundary);
     return event ? xForEvent(event) : left - 30;
   };
+  const xForCutBoundary = (boundary: number, processId: ProcessId) => {
+    const event = eventAtBoundary(trace, processId, boundary);
+    return event ? Math.min(xForEvent(event) + 12, right + 14) : left - 30;
+  };
 
   const eventById = new Map(trace.events.map((e) => [e.id, e]));
-  const messagesInChannel = new Set(Object.values(cut.channels).flat().map((m) => m.id));
-  const ghostMessages = new Set(cut.ghostMessages.map((m) => m.id));
-  const cutColor = cut.isConsistent ? "#059669" : "#dc2626";
+  const cutColor = mode === "chandy" ? "#dc2626" : cut.isConsistent ? "#059669" : "#dc2626";
 
   // Chandy-Lamport step state
   const chandyStep = snapshotRun?.steps[
@@ -251,7 +658,7 @@ function TraceDiagram({
 
   // Cut polyline
   const cutPoints = trace.processes
-    .map((pid) => `${xForBoundary(cut.boundary[pid], pid)},${rowY(pid)}`)
+    .map((pid) => `${xForCutBoundary(cut.boundary[pid], pid)},${rowY(pid)}`)
     .join(" ");
 
   // Recorded processes highlight for Chandy
@@ -262,13 +669,11 @@ function TraceDiagram({
   );
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={styles.svg}>
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMinYMid meet" style={styles.svg}>
       <defs>
-        {/* Solid arrowhead — per message color injected via stroke trick with marker-mid */}
-        {trace.messages.map((msg, i) => {
-          const isGhost = ghostMessages.has(msg.id);
-          const isInChannel = messagesInChannel.has(msg.id);
-          const color = isGhost ? "#dc2626" : isInChannel ? "#f59e0b" : MESSAGE_COLORS[i % MESSAGE_COLORS.length];
+        {/* Solid arrowhead — application messages use the sender process color */}
+        {trace.messages.map((msg) => {
+          const color = COLORS[msg.from] ?? "#334155";
           return (
             <marker key={`arr-${msg.id}`} id={`arr-${msg.id}`} viewBox="0 0 10 10" refX="9" refY="5"
               markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -276,22 +681,22 @@ function TraceDiagram({
             </marker>
           );
         })}
-        {/* Marker arrowheads */}
-        <marker id="arr-mkr-first" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e" />
-        </marker>
-        <marker id="arr-mkr-closing" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
-        </marker>
-        <marker id="arr-mkr-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
-        </marker>
+        {/* Chandy-Lamport marker arrowheads: color follows the sender process */}
+        {snapshotRun?.markerTransmissions.map((mk) => {
+          const color = COLORS[mk.from] ?? "#334155";
+          return (
+            <marker key={`arr-${mk.id}`} id={`arr-${mk.id}`} viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+            </marker>
+          );
+        })}
       </defs>
 
       {/* ── Background: subtle dot grid ── */}
       {[...Array(maxPosition + 1)].map((_, i) => (
         <line key={`grid-${i}`} x1={xForPos(i)} y1={top - 30} x2={xForPos(i)} y2={top + rowGap * (trace.processes.length - 1) + 30}
-          stroke="#e2e8f0" strokeWidth={1} strokeDasharray="2 6" />
+          stroke="#cbd5e1" strokeWidth={0.7} strokeDasharray="2 8" opacity={0.28} />
       ))}
 
       {/* ── Process lines ── */}
@@ -307,21 +712,26 @@ function TraceDiagram({
                 fill={color} opacity={0.07} />
             )}
             {/* Process label */}
-            <text x={left - 14} y={y + 5} textAnchor="end" fill={color}
-              style={{ fontSize: 15, fontWeight: 900, fontFamily: "ui-monospace, monospace" }}>
+            <text x={left - 14} y={y} textAnchor="end" dominantBaseline="middle" fill={color}
+              style={{ fontSize: 13, fontWeight: 600, fontFamily: "DM Sans, ui-sans-serif, sans-serif" }}>
               {pid}
             </text>
             {/* Main timeline */}
-            <line x1={left - 6} y1={y} x2={right + 12} y2={y}
-              stroke={color} strokeWidth={isRecorded ? 3 : 2.5} opacity={isRecorded ? 0.9 : 0.45} />
+            <line x1={left - 6} y1={y} x2={right + 10} y2={y}
+              stroke={color} strokeWidth={isRecorded ? 2.2 : 1.5} opacity={isRecorded ? 0.62 : 0.22} />
+            <polygon
+              points={`${right + 9},${y - 4} ${right + 17},${y} ${right + 9},${y + 4}`}
+              fill={color}
+              opacity={isRecorded ? 0.52 : 0.35}
+            />
             {/* Tick at start */}
-            <line x1={left - 6} y1={y - 6} x2={left - 6} y2={y + 6} stroke={color} strokeWidth={2} opacity={0.5} />
+            <line x1={left - 6} y1={y - 5} x2={left - 6} y2={y + 5} stroke={color} strokeWidth={1.4} opacity={0.38} />
           </g>
         );
       })}
 
-      {/* ── Application messages (straight diagonal arrows, colored) ── */}
-      {trace.messages.map((msg, i) => {
+      {/* ── Application messages (solid arrows, colored by sender process) ── */}
+      {trace.messages.map((msg) => {
         const sendEv = eventById.get(msg.sendEventId);
         const recvEv = msg.receiveEventId ? eventById.get(msg.receiveEventId) : undefined;
         if (!sendEv) return null;
@@ -329,11 +739,8 @@ function TraceDiagram({
         const y1 = rowY(msg.from);
         const x2 = recvEv ? xForEvent(recvEv) : x1 + 40;
         const y2 = rowY(msg.to);
-        const isGhost = ghostMessages.has(msg.id);
-        const isInChannel = messagesInChannel.has(msg.id);
-        const color = isGhost ? "#dc2626" : isInChannel ? "#f59e0b" : MESSAGE_COLORS[i % MESSAGE_COLORS.length];
-        const dash = isGhost ? "7 4" : undefined;
-        const sw = isGhost ? 2.5 : 2.2;
+        const color = COLORS[msg.from] ?? "#334155";
+        const sw = 2.2;
         // Label: place near the middle of the arrow, offset to avoid overlap
         const mx = (x1 + x2) / 2;
         const my = (y1 + y2) / 2;
@@ -345,9 +752,8 @@ function TraceDiagram({
           <g key={msg.id}>
             <line x1={x1} y1={y1} x2={x2} y2={y2}
               stroke={color} strokeWidth={sw}
-              strokeDasharray={dash}
               markerEnd={`url(#arr-${msg.id})`}
-              opacity={isGhost ? 0.95 : 0.88}
+              opacity={0.88}
             />
             {/* Label badge */}
             <rect x={mx + ox - 15} y={my + oy - 10} width={30} height={18} rx={9}
@@ -370,10 +776,10 @@ function TraceDiagram({
             const y1 = rowY(mk.from);
             const y2 = rowY(mk.to);
             const active = chandyStep?.activeMarkerId === mk.id;
-            const color = active ? "#d97706" : mk.status === "first" ? "#0f766e" : "#7c3aed";
-            const arrowId = active ? "arr-mkr-active" : mk.status === "first" ? "arr-mkr-first" : "arr-mkr-closing";
+            const color = COLORS[mk.from] ?? "#334155";
+            const arrowId = `arr-${mk.id}`;
             const sw = active ? 3 : 2;
-            const opacity = active ? 1 : 0.65;
+            const opacity = active ? 1 : 0.72;
             const mx = (x1 + x2) / 2;
             const my = (y1 + y2) / 2;
             // Perpendicular offset for label (same logic as messages)
@@ -408,7 +814,7 @@ function TraceDiagram({
       <polyline points={cutPoints} fill="none" stroke={cutColor} strokeWidth={2.5} strokeDasharray="10 6" opacity={0.9} />
       {trace.processes.map((pid) => (
         <circle key={`cut-${pid}`}
-          cx={xForBoundary(cut.boundary[pid], pid)} cy={rowY(pid)} r={5}
+          cx={xForCutBoundary(cut.boundary[pid], pid)} cy={rowY(pid)} r={5}
           fill={cutColor} stroke="#ffffff" strokeWidth={1.5} />
       ))}
 
@@ -418,25 +824,35 @@ function TraceDiagram({
         const y = rowY(event.processId);
         const included = cut.includedEventIds.has(event.id);
         const isRecorded = mode === "chandy" && recordedProcesses.has(event.processId);
+        const isActive = event.id === activeEventId;
         const procColor = COLORS[event.processId] ?? "#475569";
         // Filled circle if included in cut, outline if not
         const fill = included ? procColor : "#ffffff";
         const stroke = procColor;
-        const r = 9;
+        const r = event.kind === "internal" ? 5.5 : 7;
         // Label: alternate above/below to avoid overlaps
         const procIdx = trace.processes.indexOf(event.processId);
         const labelAbove = procIdx === 0 || procIdx === 2;
-        const labelY = labelAbove ? y - 16 : y + 24;
+        const labelY = labelAbove ? y - r - 7 : y + r + 15;
         return (
           <g key={event.id}>
+            {(included || isRecorded) && (
+              <circle cx={x} cy={y} r={r + 8} fill={procColor} opacity={included ? 0.08 : 0.05} />
+            )}
+            {isActive && (
+              <circle cx={x} cy={y} r={r + 12} fill="#fff7ed" stroke="#f97316" strokeWidth={2.2} />
+            )}
             <circle cx={x} cy={y} r={r}
-              fill={fill} stroke={stroke} strokeWidth={2.5}
-              opacity={isRecorded ? 1 : 0.88}
+              fill={fill} stroke={stroke} strokeWidth={included ? 1.6 : 1.4}
+              opacity={included || isRecorded ? 1 : 0.7}
             />
+            {isActive && (
+              <circle cx={x} cy={y} r={r + 3.5} fill="none" stroke="#f97316" strokeWidth={2} />
+            )}
             {/* Bold event label */}
             <text x={x} y={labelY} textAnchor="middle"
-              fill={procColor}
-              style={{ fontSize: 11, fontWeight: 900, fontFamily: "ui-monospace, monospace" }}>
+              fill={isActive ? "#c2410c" : procColor}
+              style={{ fontSize: isActive ? 11 : 10, fontWeight: isActive ? 900 : 600, fontFamily: "DM Mono, ui-monospace, monospace" }}>
               {event.label}
             </text>
           </g>
@@ -490,15 +906,21 @@ function CutAnalysis({ trace, cut }: { trace: DistributedTrace; cut: Cut }) {
     <Panel title="Validation de coupure">
       <StatusPill ok={cut.isConsistent} text={cut.isConsistent ? "coupure coherente" : "coupure incoherente"} />
       <p style={styles.panelText}>{cut.reason}</p>
-      <InfoLine label="Date V(C)" value={formatVector(trace.processes, cut.vectorDate)} />
-      <div style={styles.table}>
-        <div style={styles.tableHeader}>Test de Mattern</div>
+      <VectorDateCard trace={trace} cut={cut} />
+      <div style={styles.vectorCheckPanel}>
+        <div style={styles.vectorCheckTitle}>Test de Mattern</div>
         {cut.vectorChecks.map((check) => (
-          <div key={check.processId} style={styles.tableRow}>
-            <span>{check.processId}</span>
-            <span>{check.frontierLabel}</span>
-            <span>
-              {check.vectorComponent} {check.ok ? "=" : "!="} {check.boundary}
+          <div
+            key={check.processId}
+            style={{
+              ...styles.vectorCheckCard,
+              ...(check.ok ? styles.vectorCheckCardOk : styles.vectorCheckCardBad),
+            }}
+          >
+            <span style={styles.vectorCheckProcess}>{check.processId}</span>
+            <span style={styles.vectorCheckFrontier}>{check.frontierLabel}</span>
+            <span style={styles.vectorCheckEquation}>
+              V(C)[{check.processId}] {check.ok ? "=" : "!="} {check.boundary}
             </span>
           </div>
         ))}
@@ -516,6 +938,135 @@ function CutAnalysis({ trace, cut }: { trace: DistributedTrace; cut: Cut }) {
   );
 }
 
+function VectorDateCard({ trace, cut }: { trace: DistributedTrace; cut: Cut }) {
+  return (
+    <div style={{ ...styles.vectorDateCard, ...(cut.isConsistent ? styles.vectorDateOk : styles.vectorDateBad) }}>
+      <div>
+        <div style={styles.vectorDateLabel}>Date de la coupure</div>
+        <div style={styles.vectorDateHint}>maximum composante par composante</div>
+      </div>
+      <div style={styles.vectorDateValue}>{formatVector(trace.processes, cut.vectorDate)}</div>
+    </div>
+  );
+}
+
+function CutConsistencySteps({ trace, cut, stepIndex }: { trace: DistributedTrace; cut: Cut; stepIndex: number }) {
+  const frontierEvents = trace.processes.map((processId) => cut.frontierEvents[processId]);
+  const frontierLabels = frontierEvents.map((event) => event?.label ?? "debut").join(", ");
+  const includedEvents = trace.events
+    .filter((event) => cut.includedEventIds.has(event.id))
+    .map((event) => event.label)
+    .join(", ");
+  const frontierVectorLines = trace.processes.map((processId) => {
+    const frontier = cut.frontierEvents[processId];
+    return `V(${frontier?.label ?? "debut"})=${formatVector(trace.processes, frontier?.vectorClock ?? createVector(trace.processes))}`;
+  });
+  const maxExpression = formatVectorMaxExpression(trace, frontierEvents);
+  const safeStepIndex = Math.min(Math.max(0, stepIndex), CUT_CONSISTENCY_STEP_COUNT - 1);
+
+  return (
+    <div style={styles.consistencySteps}>
+      <div style={styles.stepDots}>
+        {Array.from({ length: CUT_CONSISTENCY_STEP_COUNT }, (_, index) => (
+          <span
+            key={index}
+            style={{
+              ...styles.stepDot,
+              ...(index === safeStepIndex ? styles.stepDotActive : {}),
+              ...(index < safeStepIndex ? styles.stepDotDone : {}),
+            }}
+          />
+        ))}
+      </div>
+
+      {safeStepIndex === 0 && (
+        <div style={styles.consistencyStep}>
+          <div style={styles.currentStepMeta}>Etape 1</div>
+          <div style={styles.currentStepTitle}>Etat associe a la coupure C</div>
+          <div style={styles.currentStepText}>
+            Etat local frontiere: {"{"}{frontierLabels}{"}"}
+          </div>
+          <div style={styles.currentStepText}>
+            Evenements inclus dans C: {"{"}{includedEvents || "aucun"}{"}"}
+          </div>
+        </div>
+      )}
+
+      {safeStepIndex === 1 && (
+        <div style={styles.consistencyStep}>
+          <div style={styles.currentStepMeta}>Etape 2</div>
+          <div style={styles.currentStepTitle}>Date de la coupure C</div>
+          <div style={styles.vectorProofList}>
+            {frontierVectorLines.map((line) => (
+              <div key={line} style={styles.currentStepText}>{line}</div>
+            ))}
+          </div>
+          <div style={styles.currentStepText}>V(C)={maxExpression}={formatVector(trace.processes, cut.vectorDate)}</div>
+        </div>
+      )}
+
+      {safeStepIndex === 2 && (
+        <div style={styles.consistencyStep}>
+          <div style={styles.currentStepMeta}>Etape 3</div>
+          <div style={styles.currentStepTitle}>Verifier par l'horloge vectorielle</div>
+          <div style={styles.cutCheckList}>
+            {cut.vectorChecks.map((check) => (
+              <VectorConsistencyCheck key={check.processId} trace={trace} cut={cut} processId={check.processId} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatVectorMaxExpression(trace: DistributedTrace, frontierEvents: Array<DistributedEvent | undefined>): string {
+  const vectors = frontierEvents.map((event) => event?.vectorClock ?? createVector(trace.processes));
+  const components = trace.processes.map((processId) => `max(${vectors.map((vector) => vector[processId] ?? 0).join(",")})`);
+  return `(${components.join(", ")})`;
+}
+
+function VectorConsistencyCheck({ trace, cut, processId }: { trace: DistributedTrace; cut: Cut; processId: ProcessId }) {
+  const check = cut.vectorChecks.find((item) => item.processId === processId);
+  const frontier = cut.frontierEvents[processId];
+  const frontierLabel = frontier?.label ?? "debut";
+  const frontierComponent = frontier?.vectorClock[processId] ?? 0;
+  const vectorComponent = check?.vectorComponent ?? cut.vectorDate[processId] ?? 0;
+  const isViolation = vectorComponent !== frontierComponent;
+  const statusText = isViolation ? "probleme" : "ok";
+  const statusStyle = isViolation
+    ? styles.cutCheckBad
+    : styles.cutCheckOk;
+  const symbol = isViolation ? "!=" : "=";
+  const explanation = isViolation
+    ? missingHistoryExplanation(trace, cut, processId, vectorComponent)
+    : `V(C)[${processId}] = V(${frontierLabel})[${processId}], la frontiere locale est stable.`;
+
+  return (
+    <div style={{ ...styles.cutCheckRow, ...statusStyle }}>
+      <span style={styles.cutCheckMessage}>{processId}</span>
+      <span>{frontierLabel}</span>
+      <span>{vectorComponent} {symbol} {frontierComponent}</span>
+      <span style={styles.cutCheckStatus}>{statusText}</span>
+      <span style={styles.cutCheckExplanation}>{explanation}</span>
+    </div>
+  );
+}
+
+function missingHistoryExplanation(trace: DistributedTrace, cut: Cut, processId: ProcessId, vectorComponent: number): string {
+  const boundary = cut.boundary[processId] ?? 0;
+  const missingEvents = (trace.eventsByProcess[processId] ?? [])
+    .filter((event) => event.processIndex > boundary && event.processIndex <= vectorComponent)
+    .map((event) => event.label);
+  const witnesses = trace.processes
+    .map((pid) => cut.frontierEvents[pid])
+    .filter((event): event is DistributedEvent => event !== undefined && (event.vectorClock[processId] ?? 0) > boundary)
+    .map((event) => event.label);
+  const missingText = missingEvents.length ? missingEvents.join(", ") : `des evenements de ${processId}`;
+  const witnessText = witnesses.length ? `hist(${witnesses.join(", ")})` : "l'histoire causale de C";
+  return `${missingText} appartiennent a ${witnessText}, mais ne font pas partie de la coupure: C est incoherente.`;
+}
+
 function GlobalAnalysis({ trace, globalState }: { trace: DistributedTrace; globalState: GlobalState }) {
   return (
     <Panel title="Etat global S">
@@ -523,6 +1074,20 @@ function GlobalAnalysis({ trace, globalState }: { trace: DistributedTrace; globa
       <p style={styles.panelText}>
         S contient les etats locaux el_i situes sur la coupure et les messages en transit ec_ij.
       </p>
+      <VectorDateCard trace={trace} cut={globalState.cut} />
+      <div style={styles.table}>
+        <div style={styles.tableHeader}>Coupure C utilisee</div>
+        {trace.processes.map((processId) => {
+          const frontier = globalState.cut.frontierEvents[processId];
+          return (
+            <div key={processId} style={styles.tableRow}>
+              <span>{processId}</span>
+              <span>c={globalState.boundary[processId]}</span>
+              <span>{frontier?.label ?? "debut"}</span>
+            </div>
+          );
+        })}
+      </div>
       <div style={styles.table}>
         <div style={styles.tableHeader}>Etats locaux el_i</div>
         {trace.processes.map((processId) => {
@@ -540,7 +1105,7 @@ function GlobalAnalysis({ trace, globalState }: { trace: DistributedTrace; globa
         <div style={styles.tableHeader}>Etats des canaux ec_ij</div>
         {Object.entries(globalState.channelStates).map(([channel, messages]) => (
           <div key={channel} style={styles.tableRow}>
-            <span>{channel}</span>
+            <span>{channelToCourse(channel)}</span>
             <span>{messages.length ? messages.map((message) => message.label).join(", ") : "vide"}</span>
             <span>{messages.length ? "transit" : "-"}</span>
           </div>
@@ -571,27 +1136,108 @@ function formatLocalState(trace: DistributedTrace, processId: ProcessId, boundar
   return event.label;
 }
 
+function shouldShowLegacyChandyTab(tab: SnapshotPanelTab): boolean {
+  void tab;
+  return false;
+}
+
 function ChandyAnalysis({
   trace,
   run,
   stepIndex,
-  playing,
-  onStepChange,
-  onPlayingChange,
 }: {
   trace: DistributedTrace;
   run: SnapshotRun;
   stepIndex: number;
-  playing: boolean;
-  onStepChange: (step: number) => void;
-  onPlayingChange: (playing: boolean) => void;
 }) {
   const step = run.steps[Math.min(stepIndex, run.steps.length - 1)];
+  const playing = false;
+  const onStepChange = (step: number) => step;
+  const onPlayingChange = (nextPlaying: boolean) => nextPlaying;
+
+  if (shouldShowLegacyChandyTab("chandy-step")) {
+    return (
+      <Panel title="Snapshot par marqueurs">
+        <div style={chandyStyles.stepMeta}>Etape {step.id + 1} / {run.steps.length}</div>
+        <div style={chandyStyles.stepBox}>
+          <div style={chandyStyles.stepTitle}>{step.title}</div>
+          <div style={chandyStyles.stepDetail}>{step.detail}</div>
+        </div>
+      </Panel>
+    );
+  }
+
+  if (shouldShowLegacyChandyTab("chandy-states")) {
+    return (
+      <Panel title="Etats locaux enregistres">
+        <div style={chandyStyles.stateGrid}>
+          {trace.processes.map((pid) => {
+            const boundary = step.recordedBoundary[pid] ?? 0;
+            const recorded = boundary > 0;
+            const color = COLORS[pid] ?? "#475569";
+            const label = recorded ? formatLocalState(trace, pid, boundary) : null;
+            return (
+              <div key={pid} style={{
+                ...chandyStyles.stateCell,
+                borderColor: recorded ? color : "#e2e8f0",
+                background: recorded ? `${color}10` : "#f8fafc",
+              }}>
+                <span style={{ ...chandyStyles.statePid, color }}>{pid}</span>
+                <span style={chandyStyles.stateVal}>
+                  {recorded
+                    ? <span style={{ color, fontWeight: 900 }}>{label}</span>
+                    : <span style={{ color: "#94a3b8" }}>en attente</span>
+                  }
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+    );
+  }
+
+  if (shouldShowLegacyChandyTab("chandy-channels")) {
+    return (
+      <Panel title="Etats des canaux">
+        <div style={chandyStyles.channelGrid}>
+          {trace.channels.map((channelId) => {
+            const closed = step.closedChannels.includes(channelId);
+            const messages = step.channelStates[channelId] ?? [];
+            const courseId = channelToCourse(channelId);
+            const hasMessages = messages.length > 0;
+            return (
+              <div key={channelId} style={{
+                ...chandyStyles.channelRow,
+                opacity: closed ? 1 : 0.45,
+              }}>
+                <span style={chandyStyles.channelId}>{courseId}</span>
+                <span style={chandyStyles.channelColon}>:</span>
+                <span style={{
+                  ...chandyStyles.channelContent,
+                  color: hasMessages ? "#d97706" : "#94a3b8",
+                  fontWeight: hasMessages ? 900 : 400,
+                }}>
+                  {closed
+                    ? (hasMessages ? `{${messages.map((m) => m.label).join(", ")}}` : "vide")
+                    : "..."
+                  }
+                </span>
+                {closed && (
+                  <span style={chandyStyles.channelStatus}>ok</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+    );
+  }
 
   return (
     <Panel title="Snapshot par marqueurs">
       {/* ── Step navigator ── */}
-      <div style={chandyStyles.stepBar}>
+      <div style={{ ...chandyStyles.stepBar, display: "none" }}>
         <button type="button" style={chandyStyles.navBtn} onClick={() => onStepChange(0)} title="Début">⏮</button>
         <button type="button" style={chandyStyles.navBtn} onClick={() => onStepChange(Math.max(0, stepIndex - 1))} title="Précédent">◀</button>
         <div style={chandyStyles.stepBadge}>
@@ -608,6 +1254,7 @@ function ChandyAnalysis({
 
       {/* ── Current step description ── */}
       <div style={chandyStyles.stepBox}>
+        <div style={chandyStyles.stepMeta}>Etape {step.id + 1} / {run.steps.length}</div>
         <div style={chandyStyles.stepTitle}>{step.title}</div>
         <div style={chandyStyles.stepDetail}>{step.detail}</div>
       </div>
@@ -678,6 +1325,10 @@ function ChandyAnalysis({
 }
 
 const chandyStyles: Record<string, CSSProperties> = {
+  stepMeta: {
+    fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const,
+    letterSpacing: 0.7, color: "#94a3b8", marginBottom: 8,
+  },
   stepBar: {
     display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
   },
@@ -771,19 +1422,56 @@ function TheoryPanel() {
   );
 }
 
-function EventTable({ trace }: { trace: DistributedTrace }) {
+function EventTable({
+  trace,
+  activeEventId,
+  currentEventIndex,
+}: {
+  trace: DistributedTrace;
+  activeEventId?: string;
+  currentEventIndex: number;
+}) {
+  const activeEventRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    activeEventRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [currentEventIndex]);
+
   return (
     <Panel title="Evenements et horloges" compact>
       <div style={styles.eventTable}>
-        {trace.events.map((event) => (
-          <div key={event.id} style={styles.eventCell}>
-            <span style={{ ...styles.eventKind, color: KIND_COLORS[event.kind] }}>{KIND_LABELS[event.kind]}</span>
-            <span style={styles.eventCellTitle}>
-              {event.label} - {event.processId}
-            </span>
-            <span style={styles.eventCellMeta}>{formatVector(trace.processes, event.vectorClock)}</span>
-          </div>
-        ))}
+        {trace.events.map((event, index) => {
+          const isActive = event.id === activeEventId;
+          const isReached = index <= currentEventIndex;
+          return (
+            <div
+              key={event.id}
+              ref={isActive ? activeEventRef : null}
+              style={{
+                ...styles.eventCell,
+                ...(isReached ? styles.eventCellReached : styles.eventCellPending),
+                ...(isActive ? styles.eventCellActive : {}),
+              }}
+            >
+              <div style={styles.eventCellHeader}>
+                <span style={{ ...styles.eventKind, color: KIND_COLORS[event.kind] }}>{KIND_LABELS[event.kind]}</span>
+                <span style={styles.eventCellTitle}>
+                  {event.label} - {event.processId}
+                </span>
+                <span style={styles.eventCellMeta}>{formatVector(trace.processes, event.vectorClock)}</span>
+              </div>
+              {isActive && (
+                <div style={styles.eventCellDetails}>
+                  <div style={styles.eventCellDescription}>{event.description}</div>
+                  <div style={styles.eventCellFormula}>{explainEventVector(trace, event)}</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );
@@ -806,15 +1494,6 @@ function StatusPill({ ok, text }: { ok: boolean; text: string }) {
   );
 }
 
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoLine}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function boundaryOptions(trace: DistributedTrace, processId: ProcessId): Array<{ value: number; label: string }> {
   return [
     { value: 0, label: "0 - debut" },
@@ -831,7 +1510,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: 0,
     display: "flex",
     overflow: "hidden",
-    background: "#eef2f6",
+    background: "#f0f2f7",
     color: "#0f172a",
     fontFamily:
       "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
@@ -990,27 +1669,129 @@ const styles: Record<string, CSSProperties> = {
   diagramPanel: {
     minWidth: 0,
     flex: 1,
-    padding: 14,
-    overflow: "hidden",
+    position: "relative",
+    padding: 0,
+    overflow: "auto",
+    background: "#f8faff",
+    backgroundImage:
+      "radial-gradient(circle at 20% 20%, rgba(37,99,235,0.04) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(124,58,237,0.04) 0%, transparent 50%), linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px)",
+    backgroundSize: "auto, auto, 32px 32px, 32px 32px",
   },
   svg: {
     width: "100%",
     height: "100%",
     minHeight: 360,
-    background: "#ffffff",
-    border: "1px solid #d9e1ea",
-    borderRadius: 8,
+    position: "relative",
+    zIndex: 1,
+    background: "transparent",
+    border: "none",
+    borderRadius: 0,
   },
-  rightPanel: {
-    width: 390,
-    flexShrink: 0,
-    background: "#f8fafc",
-    borderLeft: "1px solid #d9e1ea",
-    padding: 12,
+  bottomBar: {
+    background: "#ffffff",
+    borderTop: "1px solid rgba(0,0,0,0.07)",
+    padding: "10px 20px",
     display: "flex",
     flexDirection: "column",
+    alignItems: "stretch",
     gap: 12,
+    flexShrink: 0,
+    height: 52,
+  },
+  footerTopRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    width: "100%",
+  },
+  stepInfo: {
+    fontSize: 12,
+    fontFamily: "DM Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    color: "#94a3b8",
+    minWidth: 134,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 3,
+    background: "#eceef5",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+    borderRadius: 2,
+    transition: "width 0.3s ease",
+  },
+  controls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+  footerButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    border: "1px solid rgba(0,0,0,0.13)",
+    background: "#f6f7fb",
+    color: "#475569",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  footerPrimaryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderColor: "transparent",
+    background: "#2563eb",
+    color: "#ffffff",
+  },
+  footerButtonDisabled: {
+    opacity: 0.45,
+    cursor: "not-allowed",
+  },
+  rightPanel: {
+    width: 300,
+    flexShrink: 0,
+    background: "#ffffff",
+    borderLeft: "1px solid rgba(0,0,0,0.07)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+  rightPanelTabs: {
+    display: "flex",
+    borderBottom: "1px solid rgba(0,0,0,0.07)",
+    flexShrink: 0,
+  },
+  rightPanelTab: {
+    flex: 1,
+    padding: "10px 4px",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    background: "transparent",
+    color: "#94a3b8",
+    cursor: "pointer",
+    fontSize: 11,
+    fontWeight: 500,
+    fontFamily: "DM Sans, ui-sans-serif, sans-serif",
+    transition: "all 0.12s",
+  },
+  rightPanelTabActive: {
+    color: "#0f172a",
+    borderBottomColor: "#2563eb",
+    fontWeight: 600,
+  },
+  rightPanelBody: {
+    flex: 1,
+    minHeight: 0,
     overflowY: "auto",
+    padding: 12,
+    display: "grid",
+    alignContent: "start",
+    gap: 12,
   },
   panel: {
     background: "#ffffff",
@@ -1023,7 +1804,9 @@ const styles: Record<string, CSSProperties> = {
   },
   panelTitle: {
     margin: "0 0 10px",
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: 600,
+    letterSpacing: -0.1,
   },
   panelText: {
     margin: "8px 0",
@@ -1052,14 +1835,106 @@ const styles: Record<string, CSSProperties> = {
     background: "#fef2f2",
     border: "1px solid #fecaca",
   },
-  infoLine: {
+  vectorDateCard: {
+    marginTop: 10,
+    borderRadius: 8,
+    padding: "11px 12px",
     display: "flex",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    padding: "6px 0",
-    borderBottom: "1px solid #eef2f7",
+    border: "1px solid #bfdbfe",
+    background: "#eff6ff",
+  },
+  vectorDateOk: {
+    borderColor: "#bbf7d0",
+    background: "#f0fdf4",
+  },
+  vectorDateBad: {
+    borderColor: "#fecaca",
+    background: "#fff1f2",
+  },
+  vectorDateLabel: {
+    color: "#0f172a",
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  vectorDateHint: {
+    marginTop: 2,
+    color: "#64748b",
+    fontSize: 11,
+  },
+  vectorDateValue: {
+    padding: "6px 10px",
+    borderRadius: 8,
+    background: "#ffffff",
+    border: "1px solid rgba(15, 23, 42, 0.12)",
+    color: "#0f172a",
+    fontSize: 18,
+    fontWeight: 900,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.08)",
+  },
+  vectorCheckPanel: {
+    display: "grid",
+    gap: 7,
+    marginTop: 10,
+  },
+  vectorCheckTitle: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  vectorCheckCard: {
+    display: "grid",
+    gridTemplateColumns: "42px 1fr auto",
+    gap: 8,
+    alignItems: "center",
+    padding: "8px 9px",
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+    background: "#ffffff",
+  },
+  vectorCheckCardOk: {
+    borderColor: "#bbf7d0",
+    background: "#f0fdf4",
+  },
+  vectorCheckCardBad: {
+    borderColor: "#fecaca",
+    background: "#fff1f2",
+  },
+  vectorCheckProcess: {
+    width: 34,
+    height: 24,
+    borderRadius: 7,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#ffffff",
+    border: "1px solid rgba(15, 23, 42, 0.1)",
+    color: "#0f172a",
+    fontSize: 12,
+    fontWeight: 900,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+  vectorCheckFrontier: {
     color: "#475569",
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: 800,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+  vectorCheckEquation: {
+    padding: "3px 7px",
+    borderRadius: 6,
+    background: "#ffffff",
+    color: "#0f172a",
+    fontSize: 12,
+    fontWeight: 900,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   },
   table: {
     border: "1px solid #e2e8f0",
@@ -1164,8 +2039,82 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     lineHeight: 1.45,
   },
+  consistencySteps: {
+    display: "grid",
+    gap: 8,
+    marginTop: 10,
+  },
+  stepDots: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 6,
+    alignItems: "center",
+  },
+  stepDot: {
+    height: 4,
+    borderRadius: 999,
+    background: "#e2e8f0",
+  },
+  stepDotActive: {
+    background: "#f97316",
+  },
+  stepDotDone: {
+    background: "#86efac",
+  },
+  consistencyStep: {
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #e2e8f0",
+    background: "#f8fafc",
+  },
+  cutCheckList: {
+    display: "grid",
+    gap: 6,
+    marginTop: 8,
+  },
+  cutCheckRow: {
+    display: "grid",
+    gridTemplateColumns: "42px 46px 72px 58px",
+    gap: 6,
+    alignItems: "center",
+    padding: "7px 8px",
+    borderRadius: 7,
+    border: "1px solid #e2e8f0",
+    background: "#ffffff",
+    color: "#334155",
+    fontSize: 11,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+  cutCheckOk: {
+    borderColor: "#bbf7d0",
+    background: "#f0fdf4",
+  },
+  cutCheckTransit: {
+    borderColor: "#fed7aa",
+    background: "#fff7ed",
+  },
+  cutCheckBad: {
+    borderColor: "#fecaca",
+    background: "#fff1f2",
+  },
+  cutCheckMessage: {
+    fontWeight: 900,
+    color: "#0f172a",
+  },
+  cutCheckStatus: {
+    textTransform: "uppercase",
+    fontSize: 10,
+    fontWeight: 900,
+  },
+  cutCheckExplanation: {
+    gridColumn: "1 / -1",
+    color: "#475569",
+    lineHeight: 1.35,
+    fontFamily: "DM Sans, ui-sans-serif, sans-serif",
+    fontSize: 12,
+  },
   footer: {
-    height: 132,
+    height: "52px",
     flexShrink: 0,
     background: "#ffffff",
     borderTop: "1px solid #d9e1ea",
@@ -1181,10 +2130,43 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 8,
     padding: 8,
     display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 7,
+    background: "#f8fafc",
+  },
+  eventCellHeader: {
+    display: "grid",
     gridTemplateColumns: "82px 1fr auto",
     gap: 8,
     alignItems: "center",
-    background: "#f8fafc",
+  },
+  eventCellReached: {
+    background: "#ffffff",
+  },
+  eventCellPending: {
+    opacity: 0.55,
+  },
+  eventCellActive: {
+    borderColor: "#f97316",
+    background: "#fff7ed",
+    boxShadow: "0 0 0 1px rgba(249, 115, 22, 0.2)",
+  },
+  eventCellDetails: {
+    display: "grid",
+    gap: 5,
+    paddingTop: 7,
+    borderTop: "1px solid #e2e8f0",
+  },
+  eventCellDescription: {
+    color: "#7c2d12",
+    fontSize: 12,
+    lineHeight: 1.35,
+  },
+  eventCellFormula: {
+    color: "#334155",
+    fontSize: 11,
+    lineHeight: 1.45,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   },
   eventKind: {
     fontSize: 10,

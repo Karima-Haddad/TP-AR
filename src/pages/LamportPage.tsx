@@ -156,14 +156,14 @@ export default function LamportPage() {
                 </div>
 
 
-              <div className="event-log">
+              {/* <div className="event-log">
                 {currentStep.state.logs.map((log, index) => (
                   <div className="log-line" key={index}>
                     <span className="log-ts">00:0{index}</span>
                     <span className="log-msg">{log}</span>
                   </div>
                 ))}
-              </div>
+              </div> */}
             </aside>
           </div>
 

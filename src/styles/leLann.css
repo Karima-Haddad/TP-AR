@@ -151,7 +151,6 @@
   stroke: #f59e0b;
   stroke-width: 2;
   stroke-dasharray: 6 4;
-  animation: reqPulse 1.2s ease-in-out infinite alternate;
 }
 
 .lelann-req-badge {
@@ -303,7 +302,7 @@
   stroke: #f59e0b;
   stroke-width: 1.8;
   stroke-dasharray: 6 4;
-  animation: reqPulse 0.9s ease-in-out infinite alternate;
+  /* animation: reqPulse 0.9s ease-in-out infinite alternate; */
 }
 
 .lelann-req-badge {

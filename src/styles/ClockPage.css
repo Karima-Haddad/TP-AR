@@ -360,6 +360,7 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  height: 52px !important;
 }
 
 .step-info {
